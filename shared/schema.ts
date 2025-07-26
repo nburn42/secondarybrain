@@ -29,7 +29,6 @@ export const githubRepositories = pgTable("github_repositories", {
   url: text("url").notNull(),
   name: text("name").notNull(),
   description: text("description"),
-  language: text("language"),
   lastUpdated: timestamp("last_updated"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });

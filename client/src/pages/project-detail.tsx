@@ -265,12 +265,11 @@ export default function ProjectDetail() {
                       {repo.description && (
                         <p className="text-sm text-gray-600 mb-2">{repo.description}</p>
                       )}
-                      <div className="flex items-center justify-between text-xs text-gray-500">
-                        <span>{repo.language || "Unknown"}</span>
-                        {repo.lastUpdated && (
+                      {repo.lastUpdated && (
+                        <div className="text-xs text-gray-500">
                           <span>Updated {new Date(repo.lastUpdated).toLocaleDateString()}</span>
-                        )}
-                      </div>
+                        </div>
+                      )}
                     </div>
                   ))}
                   

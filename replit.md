@@ -131,3 +131,8 @@ Preferred communication style: Simple, everyday language.
   - **Display**: Priority values shown with one decimal place (e.g., "Priority: 5.0")
   - **Filtering**: Priority filters categorized as Low (0-2), Medium (2-5), High (5+)
   - **Color Coding**: Red for 8+, Yellow for 5+, Blue for 2+, Gray for below 2
+
+- **GitHub Repository Schema**: Removed language field from repository records - January 2025
+  - **Database**: Dropped language column from github_repositories table
+  - **UI Updates**: Removed language display from repository cards in project detail view
+  - **Rationale**: Simplified repository data model, focusing on essential metadata only
