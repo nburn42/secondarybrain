@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertProjectSchema, insertTaskSchema, insertGithubRepositorySchema } from "@shared/schema";
+import { insertProjectSchema, insertTaskSchema, insertGithubRepositorySchema, insertTaskItemSchema } from "@shared/schema";
 import { z } from "zod";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -181,6 +181,63 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(204).send();
     } catch (error) {
       res.status(500).json({ message: "Failed to delete task" });
+    }
+  });
+
+  // Task Items
+  app.get("/api/tasks/:taskId/items", async (req, res) => {
+    try {
+      const taskItems = await storage.getTaskItems(req.params.taskId);
+      res.json(taskItems);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch task items" });
+    }
+  });
+
+  app.get("/api/task-items/:id", async (req, res) => {
+    try {
+      const taskItem = await storage.getTaskItem(req.params.id);
+      if (!taskItem) {
+        return res.status(404).json({ message: "Task item not found" });
+      }
+      res.json(taskItem);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch task item" });
+    }
+  });
+
+  app.post("/api/task-items", async (req, res) => {
+    try {
+      const taskItemData = insertTaskItemSchema.parse(req.body);
+      const taskItem = await storage.createTaskItem(taskItemData);
+      res.status(201).json(taskItem);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid task item data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to create task item" });
+    }
+  });
+
+  app.patch("/api/task-items/:id", async (req, res) => {
+    try {
+      const taskItemData = insertTaskItemSchema.partial().parse(req.body);
+      const taskItem = await storage.updateTaskItem(req.params.id, taskItemData);
+      res.json(taskItem);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid task item data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to update task item" });
+    }
+  });
+
+  app.delete("/api/task-items/:id", async (req, res) => {
+    try {
+      await storage.deleteTaskItem(req.params.id);
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ message: "Failed to delete task item" });
     }
   });
 

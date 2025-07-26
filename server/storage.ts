@@ -2,6 +2,7 @@ import {
   projects, 
   githubRepositories, 
   tasks, 
+  taskItems,
   approvalQueue,
   type Project, 
   type InsertProject,
@@ -9,10 +10,14 @@ import {
   type InsertGithubRepository,
   type Task,
   type InsertTask,
+  type TaskItem,
+  type InsertTaskItem,
   type ApprovalQueue,
   type InsertApprovalQueue,
   type ProjectWithRelations,
   type TaskWithProject,
+  type TaskWithItems,
+  type TaskItemWithChildren,
   type ApprovalQueueWithTask
 } from "@shared/schema";
 import { db } from "./db";
@@ -35,9 +40,17 @@ export interface IStorage {
   getTasks(): Promise<TaskWithProject[]>;
   getTasksByProject(projectId: string): Promise<Task[]>;
   getTask(id: string): Promise<TaskWithProject | undefined>;
+  getTaskWithItems(id: string): Promise<TaskWithItems | undefined>;
   createTask(task: InsertTask): Promise<Task>;
   updateTask(id: string, task: Partial<InsertTask>): Promise<Task>;
   deleteTask(id: string): Promise<void>;
+
+  // Task Items
+  getTaskItems(taskId: string): Promise<TaskItemWithChildren[]>;
+  getTaskItem(id: string): Promise<TaskItem | undefined>;
+  createTaskItem(taskItem: InsertTaskItem): Promise<TaskItem>;
+  updateTaskItem(id: string, taskItem: Partial<InsertTaskItem>): Promise<TaskItem>;
+  deleteTaskItem(id: string): Promise<void>;
 
   // Approval Queue
   getApprovalQueue(): Promise<ApprovalQueueWithTask[]>;
@@ -184,6 +197,74 @@ export class DatabaseStorage implements IStorage {
     await db.delete(tasks).where(eq(tasks.id, id));
   }
 
+  async getTaskWithItems(id: string): Promise<TaskWithItems | undefined> {
+    return await db.query.tasks.findFirst({
+      where: eq(tasks.id, id),
+      with: {
+        taskItems: {
+          with: {
+            children: true,
+          },
+          orderBy: [desc(taskItems.createdAt)],
+        },
+      },
+    });
+  }
+
+  async getTaskItems(taskId: string): Promise<TaskItemWithChildren[]> {
+    return await db.query.taskItems.findMany({
+      where: and(eq(taskItems.taskId, taskId), isNull(taskItems.parentId)),
+      with: {
+        children: {
+          orderBy: [desc(taskItems.createdAt)],
+        },
+      },
+      orderBy: [desc(taskItems.createdAt)],
+    });
+  }
+
+  async getTaskItem(id: string): Promise<TaskItem | undefined> {
+    return await db.query.taskItems.findFirst({
+      where: eq(taskItems.id, id),
+    });
+  }
+
+  async createTaskItem(insertTaskItem: InsertTaskItem): Promise<TaskItem> {
+    const [taskItem] = await db
+      .insert(taskItems)
+      .values({
+        ...insertTaskItem,
+        updatedAt: new Date(),
+      })
+      .returning();
+
+    // If task item requires approval and creates files, add to approval queue
+    if (insertTaskItem.needsApproval && (insertTaskItem.type === "file_creation" || insertTaskItem.type === "tool_call")) {
+      await db.insert(approvalQueue).values({
+        taskId: insertTaskItem.taskId,
+        taskItemId: taskItem.id,
+      });
+    }
+
+    return taskItem;
+  }
+
+  async updateTaskItem(id: string, insertTaskItem: Partial<InsertTaskItem>): Promise<TaskItem> {
+    const [taskItem] = await db
+      .update(taskItems)
+      .set({
+        ...insertTaskItem,
+        updatedAt: new Date(),
+      })
+      .where(eq(taskItems.id, id))
+      .returning();
+    return taskItem;
+  }
+
+  async deleteTaskItem(id: string): Promise<void> {
+    await db.delete(taskItems).where(eq(taskItems.id, id));
+  }
+
   async getApprovalQueue(): Promise<ApprovalQueueWithTask[]> {
     return await db.query.approvalQueue.findMany({
       where: isNull(approvalQueue.reviewedAt),
@@ -193,6 +274,7 @@ export class DatabaseStorage implements IStorage {
             project: true,
           },
         },
+        taskItem: true,
       },
       orderBy: [desc(approvalQueue.submittedAt)],
     });

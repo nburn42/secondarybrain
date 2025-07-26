@@ -30,8 +30,9 @@ Preferred communication style: Simple, everyday language.
 ### Database Design
 - **Projects**: Core entity with name, description, status, and timestamps
 - **Tasks**: Linked to projects with status, numeric priority (0-10 scale), and approval workflow
+- **Task Items**: Track agent conversations, tool calls, and execution history with hierarchical parent-child relationships
 - **GitHub Repositories**: Associated with projects for code integration
-- **Approval Queue**: Manages task approval workflow with reviewer tracking
+- **Approval Queue**: Manages task approval workflow with reviewer tracking, now linked to specific task items
 
 ## Key Components
 
@@ -136,3 +137,10 @@ Preferred communication style: Simple, everyday language.
   - **Database**: Dropped language column from github_repositories table
   - **UI Updates**: Removed language display from repository cards in project detail view
   - **Rationale**: Simplified repository data model, focusing on essential metadata only
+
+- **Task Items System**: Added hierarchical conversation tracking for agent execution - January 2025
+  - **Database**: New task_items table with parent-child relationships and tool call storage
+  - **Types**: Support for planning messages, tool calls, file creation, approval requests, and rejections
+  - **API**: Full CRUD operations for task items with nested children support
+  - **Storage**: JSON fields for tool parameters/responses, file content, and execution metadata
+  - **Approval Integration**: Task items can trigger approval workflow when creating files or making tool calls
