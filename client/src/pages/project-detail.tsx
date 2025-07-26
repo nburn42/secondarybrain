@@ -33,6 +33,7 @@ export default function ProjectDetail() {
   const [isTaskDialogOpen, setIsTaskDialogOpen] = useState(false);
   const [isRepoDialogOpen, setIsRepoDialogOpen] = useState(false);
   const [isContainerDialogOpen, setIsContainerDialogOpen] = useState(false);
+  const [repoSelectionMode, setRepoSelectionMode] = useState<'create' | 'existing'>('existing');
   const { toast } = useToast();
 
   const { data: project, isLoading } = useQuery({
@@ -53,6 +54,11 @@ export default function ProjectDetail() {
   const { data: containers } = useQuery({
     queryKey: ["/api/projects", projectId, "containers"],
     enabled: !!projectId,
+  });
+
+  // Fetch all repositories for selection
+  const { data: allRepositories } = useQuery({
+    queryKey: ["/api/repositories"],
   });
 
   const taskForm = useForm({
@@ -117,6 +123,30 @@ export default function ProjectDetail() {
       toast({
         title: "Error",
         description: "Failed to add repository",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const linkExistingRepoMutation = useMutation({
+    mutationFn: async (repositoryId: string) => {
+      return await apiRequest("PUT", `/api/repositories/${repositoryId}`, {
+        projectId: projectId
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/projects", projectId, "repositories"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/repositories"] });
+      setIsRepoDialogOpen(false);
+      toast({
+        title: "Success",
+        description: "Repository linked to project successfully",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to link repository to project",
         variant: "destructive",
       });
     },
@@ -479,48 +509,81 @@ export default function ProjectDetail() {
 
         {/* Add Repository Dialog */}
         <Dialog open={isRepoDialogOpen} onOpenChange={setIsRepoDialogOpen}>
-          <DialogContent className="sm:max-w-[425px]">
+          <DialogContent className="sm:max-w-[525px]">
             <DialogHeader>
-              <DialogTitle>Add GitHub Repository</DialogTitle>
+              <DialogTitle>Add Repository to Project</DialogTitle>
             </DialogHeader>
-            <Form {...repoForm}>
-              <form onSubmit={repoForm.handleSubmit(onRepoSubmit)} className="space-y-4">
-                <FormField
-                  control={repoForm.control}
-                  name="url"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Repository URL</FormLabel>
-                      <FormControl>
-                        <Input 
-                          placeholder="https://github.com/username/repo"
-                          {...field} 
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                
-                <FormField
-                  control={repoForm.control}
-                  name="description"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Description</FormLabel>
-                      <FormControl>
-                        <Textarea 
-                          placeholder="Enter repository description"
-                          rows={3}
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+            
+            {/* Mode Selection */}
+            <div className="flex bg-gray-100 dark:bg-gray-800 rounded-lg p-1 mb-4">
+              <Button
+                type="button"
+                variant={repoSelectionMode === 'existing' ? "default" : "ghost"}
+                size="sm"
+                onClick={() => setRepoSelectionMode('existing')}
+                className="flex-1"
+              >
+                Select Existing
+              </Button>
+              <Button
+                type="button"
+                variant={repoSelectionMode === 'create' ? "default" : "ghost"}
+                size="sm"
+                onClick={() => setRepoSelectionMode('create')}
+                className="flex-1"
+              >
+                Create New
+              </Button>
+            </div>
 
-                <div className="flex justify-end space-x-2 pt-4">
+            {repoSelectionMode === 'existing' ? (
+              /* Select from Existing Repositories */
+              <div className="space-y-4">
+                <div>
+                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 block">
+                    Select Repository
+                  </label>
+                  <Select onValueChange={(repoId) => {
+                    const selectedRepo = allRepositories?.find(r => r.id === repoId);
+                    if (selectedRepo) {
+                      linkExistingRepoMutation.mutate(selectedRepo.id);
+                    }
+                  }}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Choose a repository..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {allRepositories?.filter(repo => 
+                        // Filter out repositories already linked to this project
+                        !repositories?.some(projRepo => projRepo.id === repo.id)
+                      ).map((repo) => (
+                        <SelectItem key={repo.id} value={repo.id}>
+                          <div className="flex items-center gap-2">
+                            <Github className="w-4 h-4" />
+                            <div>
+                              <div className="font-medium">{repo.name}</div>
+                              {repo.description && (
+                                <div className="text-xs text-gray-500">{repo.description}</div>
+                              )}
+                            </div>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {allRepositories?.filter(repo => 
+                  !repositories?.some(projRepo => projRepo.id === repo.id)
+                ).length === 0 && (
+                  <div className="text-center py-4 text-gray-500">
+                    <Github className="w-8 h-8 mx-auto mb-2 text-gray-300" />
+                    <p className="text-sm">No available repositories to link</p>
+                    <p className="text-xs">All repositories are already linked or create a new one</p>
+                  </div>
+                )}
+
+                <div className="flex justify-end space-x-2">
                   <Button 
                     type="button" 
                     variant="outline" 
@@ -528,15 +591,65 @@ export default function ProjectDetail() {
                   >
                     Cancel
                   </Button>
-                  <Button 
-                    type="submit" 
-                    disabled={createRepoMutation.isPending}
-                  >
-                    {createRepoMutation.isPending ? "Adding..." : "Add Repository"}
-                  </Button>
                 </div>
-              </form>
-            </Form>
+              </div>
+            ) : (
+              /* Create New Repository */
+              <Form {...repoForm}>
+                <form onSubmit={repoForm.handleSubmit(onRepoSubmit)} className="space-y-4">
+                  <FormField
+                    control={repoForm.control}
+                    name="url"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Repository URL</FormLabel>
+                        <FormControl>
+                          <Input 
+                            placeholder="https://github.com/username/repo"
+                            {...field} 
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={repoForm.control}
+                    name="description"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Description</FormLabel>
+                        <FormControl>
+                          <Textarea 
+                            placeholder="Enter repository description"
+                            rows={3}
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <div className="flex justify-end space-x-2 pt-4">
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      onClick={() => setIsRepoDialogOpen(false)}
+                    >
+                      Cancel
+                    </Button>
+                    <Button 
+                      type="submit" 
+                      disabled={createRepoMutation.isPending}
+                    >
+                      {createRepoMutation.isPending ? "Adding..." : "Add Repository"}
+                    </Button>
+                  </div>
+                </form>
+              </Form>
+            )}
           </DialogContent>
         </Dialog>
       </main>

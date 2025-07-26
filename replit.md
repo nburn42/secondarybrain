@@ -225,3 +225,10 @@ Preferred communication style: Simple, everyday language.
   - **Card Stack**: Progressive card navigation through pending approvals with position indicators
   - **Touch Optimized**: Mobile-first design with large touch targets and haptic-like feedback
   - **API Integration**: Seamless approval/rejection with automatic refresh and progress tracking
+
+- **Enhanced Repository Selection**: Improved project repository management with existing repo linking - January 2025
+  - **Dual Mode Dialog**: Toggle between selecting existing repositories and creating new ones
+  - **Repository Filtering**: Automatically filters out already-linked repositories from selection
+  - **Visual Repository Cards**: Rich display with GitHub icons, names, and descriptions
+  - **Seamless Linking**: One-click linking of existing repositories to projects
+  - **Project Integration**: Repositories can be shared across multiple projects or kept project-specific
