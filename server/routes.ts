@@ -146,6 +146,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get("/api/tasks/:id/children", async (req, res) => {
+    try {
+      const task = await storage.getTaskWithChildren(req.params.id);
+      if (!task) {
+        return res.status(404).json({ message: "Task not found" });
+      }
+      res.json(task);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch task with children" });
+    }
+  });
+
+  app.get("/api/parent-tasks", async (req, res) => {
+    try {
+      const projectId = req.query.projectId as string;
+      const parentTasks = await storage.getParentTasks(projectId);
+      res.json(parentTasks);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch parent tasks" });
+    }
+  });
+
   app.post("/api/projects/:projectId/tasks", async (req, res) => {
     try {
       const taskData = insertTaskSchema.parse({

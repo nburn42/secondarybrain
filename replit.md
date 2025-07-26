@@ -157,3 +157,11 @@ Preferred communication style: Simple, everyday language.
   - **Database**: Removed approvedAt and rejectionReason columns from tasks table
   - **Logic**: Task approval logic moved entirely to task_items with needsApproval/isApproved fields
   - **Rationale**: Tasks represent execution state, while task items handle approval workflow
+
+- **Hierarchical Task System**: Added parent-child relationships for tasks - January 2025
+  - **Database**: Added parentId field to tasks table with self-referencing foreign key
+  - **Relations**: Tasks can have parent and children relationships through Drizzle relations
+  - **API**: New endpoints for `/api/tasks/:id/children` and `/api/parent-tasks`
+  - **Storage**: Methods for querying parent tasks with children and task hierarchies
+  - **Types**: Extended types for TaskWithChildren and TaskWithProjectAndChildren
+  - **Use Case**: Enables breaking down complex tasks into subtasks with proper hierarchy

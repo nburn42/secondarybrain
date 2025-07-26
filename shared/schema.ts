@@ -42,6 +42,7 @@ export const githubRepositories = pgTable("github_repositories", {
 export const tasks = pgTable("tasks", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   projectId: varchar("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+  parentId: varchar("parent_id").references(() => tasks.id),
   title: text("title").notNull(),
   description: text("description"),
   status: taskStatusEnum("status").notNull().default("pending"),
@@ -92,6 +93,11 @@ export const tasksRelations = relations(tasks, ({ one, many }) => ({
     fields: [tasks.projectId],
     references: [projects.id],
   }),
+  parent: one(tasks, {
+    fields: [tasks.parentId],
+    references: [tasks.id],
+  }),
+  children: many(tasks),
   taskItems: many(taskItems),
 }));
 
@@ -160,10 +166,19 @@ export type TaskWithProject = Task & {
   project: Project;
 };
 
+export type TaskWithChildren = Task & {
+  children: Task[];
+};
+
 export type TaskItemWithChildren = TaskItem & {
   children: TaskItem[];
 };
 
 export type TaskWithItems = Task & {
   taskItems: TaskItemWithChildren[];
+};
+
+export type TaskWithProjectAndChildren = Task & {
+  project: Project;
+  children: Task[];
 };

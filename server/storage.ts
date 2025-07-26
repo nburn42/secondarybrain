@@ -13,8 +13,10 @@ import {
   type InsertTaskItem,
   type ProjectWithRelations,
   type TaskWithProject,
+  type TaskWithChildren,
   type TaskWithItems,
-  type TaskItemWithChildren
+  type TaskItemWithChildren,
+  type TaskWithProjectAndChildren
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, isNull, sql } from "drizzle-orm";
@@ -36,7 +38,9 @@ export interface IStorage {
   getTasks(): Promise<TaskWithProject[]>;
   getTasksByProject(projectId: string): Promise<Task[]>;
   getTask(id: string): Promise<TaskWithProject | undefined>;
+  getTaskWithChildren(id: string): Promise<TaskWithChildren | undefined>;
   getTaskWithItems(id: string): Promise<TaskWithItems | undefined>;
+  getParentTasks(projectId?: string): Promise<TaskWithProjectAndChildren[]>;
   createTask(task: InsertTask): Promise<Task>;
   updateTask(id: string, task: Partial<InsertTask>): Promise<Task>;
   deleteTask(id: string): Promise<void>;
@@ -184,6 +188,17 @@ export class DatabaseStorage implements IStorage {
     await db.delete(tasks).where(eq(tasks.id, id));
   }
 
+  async getTaskWithChildren(id: string): Promise<TaskWithChildren | undefined> {
+    return await db.query.tasks.findFirst({
+      where: eq(tasks.id, id),
+      with: {
+        children: {
+          orderBy: [desc(tasks.createdAt)],
+        },
+      },
+    });
+  }
+
   async getTaskWithItems(id: string): Promise<TaskWithItems | undefined> {
     return await db.query.tasks.findFirst({
       where: eq(tasks.id, id),
@@ -195,6 +210,23 @@ export class DatabaseStorage implements IStorage {
           orderBy: [desc(taskItems.createdAt)],
         },
       },
+    });
+  }
+
+  async getParentTasks(projectId?: string): Promise<TaskWithProjectAndChildren[]> {
+    const whereClause = projectId 
+      ? and(isNull(tasks.parentId), eq(tasks.projectId, projectId))
+      : isNull(tasks.parentId);
+
+    return await db.query.tasks.findMany({
+      where: whereClause,
+      with: {
+        project: true,
+        children: {
+          orderBy: [desc(tasks.createdAt)],
+        },
+      },
+      orderBy: [desc(tasks.createdAt)],
     });
   }
 
