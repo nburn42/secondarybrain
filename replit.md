@@ -216,3 +216,12 @@ Preferred communication style: Simple, everyday language.
   - **Status Management**: Tasks automatically progress from pending → running → completed/failed
   - **Concurrency Control**: Multiple containers can work on different tasks without conflicts
   - **Repository Integration**: Agents clone project repositories before starting task execution
+
+- **Tinder-Style Swipe Approval Interface**: Mobile-first approval system with gesture controls - January 2025
+  - **Swipe Gestures**: Left swipe to reject, right swipe to approve with smooth animations
+  - **Rejection Reasons**: Modal dialog prompts for detailed rejection explanations when rejecting
+  - **Dual Mode UI**: Toggle between swipe mode and traditional list view for different preferences
+  - **Visual Feedback**: Real-time color gradients and icons show swipe direction and action
+  - **Card Stack**: Progressive card navigation through pending approvals with position indicators
+  - **Touch Optimized**: Mobile-first design with large touch targets and haptic-like feedback
+  - **API Integration**: Seamless approval/rejection with automatic refresh and progress tracking

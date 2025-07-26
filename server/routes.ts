@@ -387,11 +387,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/task-items/:id/approve", async (req, res) => {
     try {
-      const { isApproved, rejectionReason } = req.body;
-      await storage.processTaskItemApproval(req.params.id, isApproved, rejectionReason);
-      res.json({ message: "Task item approval processed successfully" });
+      await storage.processTaskItemApproval(req.params.id, true);
+      res.json({ success: true });
     } catch (error) {
-      res.status(500).json({ message: "Failed to process task item approval" });
+      res.status(500).json({ message: "Failed to approve task item" });
+    }
+  });
+
+  app.post("/api/task-items/:id/reject", async (req, res) => {
+    try {
+      const { reason } = req.body;
+      if (!reason || typeof reason !== 'string') {
+        return res.status(400).json({ message: "Rejection reason is required" });
+      }
+      
+      await storage.processTaskItemApproval(req.params.id, false, reason);
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to reject task item" });
     }
   });
 
