@@ -38,6 +38,8 @@ export const githubRepositories = pgTable("github_repositories", {
   description: text("description"),
   lastUpdated: timestamp("last_updated"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
+  githubToken: text("github_token"), // Encrypted GitHub personal access token
+  isPrivate: boolean("is_private").default(false),
 });
 
 export const tasks = pgTable("tasks", {

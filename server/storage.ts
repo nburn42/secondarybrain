@@ -36,6 +36,7 @@ export interface IStorage {
   createRepository(repository: InsertGithubRepository): Promise<GithubRepository>;
   createGlobalRepository(repository: InsertGlobalRepository): Promise<GithubRepository>;
   deleteRepository(id: string): Promise<void>;
+  updateRepositoryAuth(id: string, githubToken: string, isPrivate: boolean): Promise<GithubRepository | undefined>;
 
   // Tasks
   getTasks(): Promise<TaskWithProject[]>;
@@ -368,6 +369,15 @@ export class DatabaseStorage implements IStorage {
       completedTasks: Number(completedTasksCount.count),
       runningTasks: Number(runningTasksCount.count),
     };
+  }
+
+  async updateRepositoryAuth(id: string, githubToken: string, isPrivate: boolean): Promise<GithubRepository | undefined> {
+    const [repo] = await db
+      .update(githubRepositories)
+      .set({ githubToken, isPrivate })
+      .where(eq(githubRepositories.id, id))
+      .returning();
+    return repo;
   }
 }
 

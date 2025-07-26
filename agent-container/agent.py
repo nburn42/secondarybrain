@@ -70,10 +70,13 @@ class TaskAgent:
         repo_name = repo['name']
         repo_url = repo['url']
         clone_path = self.workspace_dir / repo_name
+        github_token = repo.get('githubToken')
+        is_private = repo.get('isPrivate', False)
         
         print(f"Cloning repository: {repo_name}")
         print(f"URL: {repo_url}")
         print(f"Target path: {clone_path}")
+        print(f"Private repo: {is_private}")
         
         try:
             # Remove existing directory if it exists
@@ -82,14 +85,42 @@ class TaskAgent:
                 import shutil
                 shutil.rmtree(clone_path)
             
+            # Prepare clone URL with authentication if available
+            clone_url = repo_url
+            if github_token and is_private:
+                # Decrypt the token (assuming we add decryption capability)
+                decrypted_token = self._decrypt_github_token(github_token)
+                if decrypted_token:
+                    # Format: https://token@github.com/owner/repo.git
+                    if repo_url.startswith('https://github.com/'):
+                        clone_url = repo_url.replace('https://github.com/', f'https://{decrypted_token}@github.com/')
+                    print(f"Using authenticated clone URL")
+                else:
+                    print("Warning: Failed to decrypt GitHub token, using public clone")
+            
             # Clone the repository
-            git.Repo.clone_from(repo_url, clone_path)
+            git.Repo.clone_from(clone_url, clone_path)
             print(f"Successfully cloned {repo_name}")
             return True
             
         except Exception as e:
             print(f"Failed to clone {repo_name}: {e}")
+            if is_private and not github_token:
+                print("Note: This appears to be a private repository. Authentication may be required.")
             return False
+
+    def _decrypt_github_token(self, encrypted_token: str) -> str:
+        """Decrypt GitHub token - placeholder for decryption logic"""
+        # In a real implementation, this would decrypt the token
+        # For now, we'll assume the token is passed through decrypted via API
+        # This method would use the same decryption as the server
+        try:
+            # TODO: Implement proper decryption matching server/crypto.ts
+            # For now, return the token as-is (this would be insecure in production)
+            return encrypted_token
+        except Exception as e:
+            print(f"Failed to decrypt token: {e}")
+            return ""
 
     def setup_workspace(self):
         """Set up the workspace by cloning all project repositories"""

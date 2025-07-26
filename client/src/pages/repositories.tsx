@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Plus, GitBranch, Trash2, ExternalLink, FolderPlus } from "lucide-react";
+import { Plus, GitBranch, Trash2, ExternalLink, FolderPlus, Key, Lock, Unlock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -16,6 +16,8 @@ import { insertGlobalRepositorySchema, type InsertGlobalRepository, type GithubR
 
 export default function Repositories() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isAuthDialogOpen, setIsAuthDialogOpen] = useState(false);
+  const [selectedRepo, setSelectedRepo] = useState<GithubRepository | null>(null);
   const { toast } = useToast();
 
   const { data: repositories = [], isLoading } = useQuery<GithubRepository[]>({
@@ -62,6 +64,28 @@ export default function Repositories() {
     },
   });
 
+  const authMutation = useMutation({
+    mutationFn: ({ id, githubToken, isPrivate }: { id: string; githubToken: string; isPrivate: boolean }) =>
+      apiRequest("PUT", `/api/repositories/${id}/auth`, { githubToken, isPrivate }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/repositories"] });
+      setIsAuthDialogOpen(false);
+      setSelectedRepo(null);
+      authForm.reset();
+      toast({
+        title: "Authentication updated",
+        description: "GitHub authentication has been configured successfully.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to update authentication. Please check your token.",
+        variant: "destructive",
+      });
+    },
+  });
+
   const form = useForm<InsertGlobalRepository>({
     resolver: zodResolver(insertGlobalRepositorySchema),
     defaultValues: {
@@ -72,8 +96,30 @@ export default function Repositories() {
     },
   });
 
+  const authForm = useForm<{ githubToken: string; isPrivate: boolean }>({
+    defaultValues: {
+      githubToken: "",
+      isPrivate: false,
+    },
+  });
+
   const onSubmit = (data: InsertGlobalRepository) => {
     createMutation.mutate(data);
+  };
+
+  const onAuthSubmit = (data: { githubToken: string; isPrivate: boolean }) => {
+    if (selectedRepo) {
+      authMutation.mutate({
+        id: selectedRepo.id,
+        githubToken: data.githubToken,
+        isPrivate: data.isPrivate,
+      });
+    }
+  };
+
+  const handleAuthRepo = (repo: GithubRepository) => {
+    setSelectedRepo(repo);
+    setIsAuthDialogOpen(true);
   };
 
   const handleUrlChange = (url: string) => {
@@ -200,6 +246,82 @@ export default function Repositories() {
             </Form>
           </DialogContent>
         </Dialog>
+
+        {/* Authentication Dialog */}
+        <Dialog open={isAuthDialogOpen} onOpenChange={setIsAuthDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>GitHub Authentication</DialogTitle>
+            </DialogHeader>
+            <Form {...authForm}>
+              <form onSubmit={authForm.handleSubmit(onAuthSubmit)} className="space-y-4">
+                <div className="text-sm text-muted-foreground mb-4">
+                  Add your GitHub Personal Access Token to enable private repository access.
+                  <br />
+                  <a 
+                    href="https://github.com/settings/tokens" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-blue-600 hover:underline"
+                  >
+                    Create a token here →
+                  </a>
+                </div>
+                <FormField
+                  control={authForm.control}
+                  name="githubToken"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>GitHub Personal Access Token</FormLabel>
+                      <FormControl>
+                        <Input
+                          {...field}
+                          type="password"
+                          placeholder="ghp_xxxxxxxxxxxxxxxxxxxx"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={authForm.control}
+                  name="isPrivate"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                      <div className="space-y-0.5">
+                        <FormLabel className="text-base">Private Repository</FormLabel>
+                        <p className="text-sm text-muted-foreground">
+                          This repository requires authentication to clone
+                        </p>
+                      </div>
+                      <FormControl>
+                        <input
+                          type="checkbox"
+                          checked={field.value}
+                          onChange={field.onChange}
+                          className="rounded border-gray-300"
+                        />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+                <div className="flex justify-end gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setIsAuthDialogOpen(false)}
+                  >
+                    Cancel
+                  </Button>
+                  <Button type="submit" disabled={authMutation.isPending}>
+                    {authMutation.isPending ? "Saving..." : "Save Authentication"}
+                  </Button>
+                </div>
+              </form>
+            </Form>
+          </DialogContent>
+        </Dialog>
       </div>
 
       {repositories.length === 0 ? (
@@ -269,6 +391,14 @@ export default function Repositories() {
                       <ExternalLink className="h-3 w-3" />
                       View on GitHub
                     </a>
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleAuthRepo(repo)}
+                    title={repo.githubToken ? "Update authentication" : "Add authentication"}
+                  >
+                    {repo.githubToken ? <Lock className="h-3 w-3 text-green-600" /> : <Key className="h-3 w-3 text-gray-400" />}
                   </Button>
                 </div>
               </CardContent>

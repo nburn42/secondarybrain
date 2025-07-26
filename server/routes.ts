@@ -238,9 +238,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { project_id } = req.agent;
       const repositories = await storage.getRepositoriesByProject(project_id);
-      res.json(repositories);
+      
+      // Decrypt GitHub tokens for agent use
+      const { decryptToken } = await import('./crypto');
+      const reposWithDecryptedTokens = repositories.map(repo => ({
+        ...repo,
+        githubToken: repo.githubToken ? decryptToken(repo.githubToken) : null
+      }));
+      
+      res.json(reposWithDecryptedTokens);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch repositories" });
+    }
+  });
+
+  // Repository authentication
+  app.put("/api/repositories/:id/auth", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { githubToken, isPrivate } = req.body;
+
+      if (!githubToken) {
+        return res.status(400).json({ message: "GitHub token is required" });
+      }
+
+      // Encrypt the token before storing
+      const { encryptToken } = await import('./crypto');
+      const encryptedToken = encryptToken(githubToken);
+
+      const updatedRepo = await storage.updateRepositoryAuth(id, encryptedToken, isPrivate || false);
+      
+      if (!updatedRepo) {
+        return res.status(404).json({ message: "Repository not found" });
+      }
+
+      // Return the repository without the encrypted token
+      const { githubToken: _, ...safeRepo } = updatedRepo;
+      res.json({ ...safeRepo, hasAuth: true });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to update repository authentication" });
     }
   });
 

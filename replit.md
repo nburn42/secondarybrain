@@ -179,3 +179,11 @@ Preferred communication style: Simple, everyday language.
   - **Workspace**: Agent clones project repositories into `/workspace` directory
   - **API**: Protected agent endpoints for repository access with JWT authentication
   - **Structure**: Complete agent-container subdirectory with Dockerfile, requirements, and scripts
+
+- **GitHub Authentication System**: Implemented secure repository authentication - January 2025
+  - **Database**: Added githubToken and isPrivate fields to repositories table
+  - **Encryption**: Secure token storage using AES encryption in server/crypto.ts
+  - **UI**: Authentication dialog in repositories page with GitHub token input
+  - **Agent Integration**: Decrypted tokens passed to agent containers for private repo cloning
+  - **API**: PUT /api/repositories/:id/auth endpoint for setting authentication
+  - **Clone Support**: Agent automatically uses authentication for private repositories
