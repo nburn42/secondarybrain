@@ -7,6 +7,7 @@ import {
   type InsertProject,
   type GithubRepository,
   type InsertGithubRepository,
+  type InsertGlobalRepository,
   type Task,
   type InsertTask,
   type TaskItem,
@@ -33,6 +34,7 @@ export interface IStorage {
   getAllRepositories(): Promise<GithubRepository[]>;
   getRepositoriesByProject(projectId: string): Promise<GithubRepository[]>;
   createRepository(repository: InsertGithubRepository): Promise<GithubRepository>;
+  createGlobalRepository(repository: InsertGlobalRepository): Promise<GithubRepository>;
   deleteRepository(id: string): Promise<void>;
 
   // Tasks
@@ -130,6 +132,17 @@ export class DatabaseStorage implements IStorage {
     const [repository] = await db
       .insert(githubRepositories)
       .values(insertRepository)
+      .returning();
+    return repository;
+  }
+
+  async createGlobalRepository(insertRepository: InsertGlobalRepository): Promise<GithubRepository> {
+    const [repository] = await db
+      .insert(githubRepositories)
+      .values({
+        ...insertRepository,
+        projectId: null, // Global repository not tied to specific project
+      })
       .returning();
     return repository;
   }

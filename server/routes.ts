@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertProjectSchema, insertTaskSchema, insertGithubRepositorySchema, insertTaskItemSchema } from "@shared/schema";
+import { insertProjectSchema, insertTaskSchema, insertGithubRepositorySchema, insertGlobalRepositorySchema, insertTaskItemSchema } from "@shared/schema";
 import { z } from "zod";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -79,6 +79,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(repositories);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch repositories" });
+    }
+  });
+
+  app.post("/api/repositories", async (req, res) => {
+    try {
+      const validatedData = insertGlobalRepositorySchema.parse(req.body);
+      const repository = await storage.createGlobalRepository(validatedData);
+      res.status(201).json(repository);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid input", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to create repository" });
     }
   });
 

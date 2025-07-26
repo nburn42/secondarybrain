@@ -31,7 +31,8 @@ export const projects = pgTable("projects", {
 
 export const githubRepositories = pgTable("github_repositories", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  projectId: varchar("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+  projectId: varchar("project_id").references(() => projects.id, { onDelete: "cascade" }), // Optional for global repos
+  owner: text("owner"), // Add owner field for GitHub username/org
   url: text("url").notNull(),
   name: text("name").notNull(),
   description: text("description"),
@@ -128,12 +129,11 @@ export const insertGithubRepositorySchema = createInsertSchema(githubRepositorie
   lastUpdated: true,
 });
 
-// Standalone repository schema for global repository management (without projectId)
-export const insertStandaloneRepositorySchema = z.object({
-  name: z.string().min(1, "Repository name is required"),
+// Global repository schema for repository management (extends GitHub repository with owner field)
+export const insertGlobalRepositorySchema = insertGithubRepositorySchema.extend({
   owner: z.string().min(1, "Owner is required"),
-  url: z.string().url("Must be a valid URL"),
-  description: z.string().optional().nullable(),
+}).omit({
+  projectId: true, // Remove projectId requirement for global repository management
 });
 
 export const insertTaskSchema = createInsertSchema(tasks).omit({
@@ -158,7 +158,7 @@ export type Project = typeof projects.$inferSelect;
 export type InsertGithubRepository = z.infer<typeof insertGithubRepositorySchema>;
 export type GithubRepository = typeof githubRepositories.$inferSelect;
 
-export type InsertStandaloneRepository = z.infer<typeof insertStandaloneRepositorySchema>;
+export type InsertGlobalRepository = z.infer<typeof insertGlobalRepositorySchema>;
 
 export type InsertTask = z.infer<typeof insertTaskSchema>;
 export type Task = typeof tasks.$inferSelect;

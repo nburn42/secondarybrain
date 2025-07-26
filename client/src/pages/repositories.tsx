@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Plus, GitBranch, Trash2, ExternalLink } from "lucide-react";
+import { Plus, GitBranch, Trash2, ExternalLink, FolderPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -12,20 +12,21 @@ import { useToast } from "@/hooks/use-toast";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { queryClient, apiRequest } from "@/lib/queryClient";
-import { insertGithubRepositorySchema, type GithubRepository, type InsertGithubRepository } from "@shared/schema";
+import { insertGlobalRepositorySchema, type InsertGlobalRepository, type GithubRepository } from "@shared/schema";
 
 export default function Repositories() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const { toast } = useToast();
 
-  const { data: repositories = [], isLoading } = useQuery({
+  const { data: repositories = [], isLoading } = useQuery<GithubRepository[]>({
     queryKey: ["/api/repositories"],
   });
 
   const createMutation = useMutation({
-    mutationFn: (data: InsertGithubRepository) => 
+    mutationFn: (data: InsertGlobalRepository) => 
       apiRequest("/api/repositories", {
         method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
       }),
     onSuccess: () => {
@@ -67,8 +68,8 @@ export default function Repositories() {
     },
   });
 
-  const form = useForm<InsertGithubRepository>({
-    resolver: zodResolver(insertGithubRepositorySchema),
+  const form = useForm<InsertGlobalRepository>({
+    resolver: zodResolver(insertGlobalRepositorySchema),
     defaultValues: {
       name: "",
       owner: "",
@@ -77,7 +78,7 @@ export default function Repositories() {
     },
   });
 
-  const onSubmit = (data: InsertGithubRepository) => {
+  const onSubmit = (data: InsertGlobalRepository) => {
     createMutation.mutate(data);
   };
 
@@ -180,6 +181,7 @@ export default function Repositories() {
                       <FormControl>
                         <Textarea
                           {...field}
+                          value={field.value || ""}
                           placeholder="Brief description of the repository"
                           rows={3}
                         />
@@ -246,9 +248,11 @@ export default function Repositories() {
                     <Trash2 className="h-4 w-4" />
                   </Button>
                 </div>
-                <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                  <Badge variant="secondary">{repo.owner}</Badge>
-                </div>
+                {repo.owner && (
+                  <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                    <Badge variant="secondary">{repo.owner}</Badge>
+                  </div>
+                )}
               </CardHeader>
               <CardContent>
                 {repo.description && (

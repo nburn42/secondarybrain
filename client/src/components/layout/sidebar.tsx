@@ -5,6 +5,7 @@ import {
   FolderOpen, 
   CheckCircle, 
   ClipboardList,
+  GitBranch,
   Plus,
   Circle
 } from "lucide-react";
@@ -33,6 +34,12 @@ export default function Sidebar() {
       href: "/projects",
       icon: FolderOpen,
       current: location === "/projects",
+    },
+    {
+      name: "Repositories",
+      href: "/repositories",
+      icon: GitBranch,
+      current: location === "/repositories",
     },
     {
       name: "Approval Queue",
