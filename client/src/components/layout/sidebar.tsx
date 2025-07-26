@@ -1,0 +1,114 @@
+import { Link, useLocation } from "wouter";
+import { useQuery } from "@tanstack/react-query";
+import { 
+  LayoutDashboard, 
+  FolderOpen, 
+  CheckCircle, 
+  ClipboardList,
+  Plus,
+  Circle
+} from "lucide-react";
+
+export default function Sidebar() {
+  const [location] = useLocation();
+  
+  const { data: stats } = useQuery({
+    queryKey: ["/api/dashboard/stats"],
+  });
+
+  const { data: recentProjects } = useQuery({
+    queryKey: ["/api/projects"],
+    select: (data) => data?.slice(0, 2),
+  });
+
+  const navItems = [
+    {
+      name: "Dashboard",
+      href: "/",
+      icon: LayoutDashboard,
+      current: location === "/",
+    },
+    {
+      name: "Projects", 
+      href: "/projects",
+      icon: FolderOpen,
+      current: location === "/projects",
+    },
+    {
+      name: "Approval Queue",
+      href: "/approvals", 
+      icon: CheckCircle,
+      current: location === "/approvals",
+      badge: stats?.pendingApprovals,
+    },
+    {
+      name: "All Tasks",
+      href: "/tasks",
+      icon: ClipboardList,
+      current: location === "/tasks",
+    },
+  ];
+
+  return (
+    <div className="fixed inset-y-0 left-0 w-64 bg-white shadow-lg z-50">
+      <div className="flex items-center px-6 py-4 border-b border-gray-200">
+        <div className="flex-shrink-0">
+          <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
+            <span className="text-white font-bold text-sm">NN</span>
+          </div>
+        </div>
+        <div className="ml-3">
+          <h1 className="text-lg font-semibold text-gray-900">Neural Notify</h1>
+        </div>
+      </div>
+      
+      <nav className="mt-6 px-3">
+        <div className="space-y-1">
+          {navItems.map((item) => (
+            <Link key={item.name} href={item.href}>
+              <a className={`
+                ${item.current 
+                  ? 'bg-blue-50 text-primary' 
+                  : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'
+                } group flex items-center px-3 py-2 text-sm font-medium rounded-md
+              `}>
+                <item.icon className={`
+                  ${item.current ? 'text-primary' : 'text-gray-400 group-hover:text-gray-500'} 
+                  mr-3 h-5 w-5
+                `} />
+                {item.name}
+                {item.badge && (
+                  <span className="ml-auto bg-warning text-white rounded-full px-2 py-1 text-xs">
+                    {item.badge}
+                  </span>
+                )}
+              </a>
+            </Link>
+          ))}
+        </div>
+      </nav>
+      
+      <div className="mt-8 px-3">
+        <h3 className="px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+          Recent Projects
+        </h3>
+        <div className="mt-2 space-y-1">
+          {recentProjects?.map((project) => (
+            <Link key={project.id} href={`/projects/${project.id}`}>
+              <a className="text-gray-700 hover:bg-gray-50 hover:text-gray-900 group flex items-center px-3 py-2 text-sm font-medium rounded-md">
+                <Circle className="w-2 h-2 mr-3 text-accent fill-current" />
+                {project.name}
+              </a>
+            </Link>
+          ))}
+          <Link href="/projects">
+            <a className="text-gray-500 hover:bg-gray-50 hover:text-gray-700 group flex items-center px-3 py-2 text-sm font-medium rounded-md">
+              <Plus className="w-4 h-4 mr-2" />
+              View All
+            </a>
+          </Link>
+        </div>
+      </div>
+    </div>
+  );
+}
