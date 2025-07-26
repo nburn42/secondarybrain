@@ -73,6 +73,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // GitHub Repositories
+  app.get("/api/repositories", async (req, res) => {
+    try {
+      const repositories = await storage.getAllRepositories();
+      res.json(repositories);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch repositories" });
+    }
+  });
+
   app.get("/api/projects/:projectId/repositories", async (req, res) => {
     try {
       const repositories = await storage.getRepositoriesByProject(req.params.projectId);

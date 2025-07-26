@@ -30,6 +30,7 @@ export interface IStorage {
   deleteProject(id: string): Promise<void>;
 
   // GitHub Repositories
+  getAllRepositories(): Promise<GithubRepository[]>;
   getRepositoriesByProject(projectId: string): Promise<GithubRepository[]>;
   createRepository(repository: InsertGithubRepository): Promise<GithubRepository>;
   deleteRepository(id: string): Promise<void>;
@@ -111,6 +112,10 @@ export class DatabaseStorage implements IStorage {
 
   async deleteProject(id: string): Promise<void> {
     await db.delete(projects).where(eq(projects.id, id));
+  }
+
+  async getAllRepositories(): Promise<GithubRepository[]> {
+    return await db.select().from(githubRepositories).orderBy(desc(githubRepositories.createdAt));
   }
 
   async getRepositoriesByProject(projectId: string): Promise<GithubRepository[]> {

@@ -128,6 +128,14 @@ export const insertGithubRepositorySchema = createInsertSchema(githubRepositorie
   lastUpdated: true,
 });
 
+// Standalone repository schema for global repository management (without projectId)
+export const insertStandaloneRepositorySchema = z.object({
+  name: z.string().min(1, "Repository name is required"),
+  owner: z.string().min(1, "Owner is required"),
+  url: z.string().url("Must be a valid URL"),
+  description: z.string().optional().nullable(),
+});
+
 export const insertTaskSchema = createInsertSchema(tasks).omit({
   id: true,
   createdAt: true,
@@ -149,6 +157,8 @@ export type Project = typeof projects.$inferSelect;
 
 export type InsertGithubRepository = z.infer<typeof insertGithubRepositorySchema>;
 export type GithubRepository = typeof githubRepositories.$inferSelect;
+
+export type InsertStandaloneRepository = z.infer<typeof insertStandaloneRepositorySchema>;
 
 export type InsertTask = z.infer<typeof insertTaskSchema>;
 export type Task = typeof tasks.$inferSelect;
