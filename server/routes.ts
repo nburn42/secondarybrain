@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertProjectSchema, insertTaskSchema, insertGithubRepositorySchema, insertGlobalRepositorySchema, insertTaskItemSchema } from "@shared/schema";
+import { insertProjectSchema, insertTaskSchema, insertGithubRepositorySchema, insertGlobalRepositorySchema, insertTaskItemSchema, insertContainerSchema } from "@shared/schema";
 import { generateAgentToken, verifyAgentToken, extractTokenFromRequest } from "./auth";
 import { z } from "zod";
 
@@ -392,6 +392,72 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ message: "Task item approval processed successfully" });
     } catch (error) {
       res.status(500).json({ message: "Failed to process task item approval" });
+    }
+  });
+
+  // Container routes
+  app.get("/api/projects/:projectId/containers", async (req, res) => {
+    try {
+      const containers = await storage.getContainersByProject(req.params.projectId);
+      res.json(containers);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch containers" });
+    }
+  });
+
+  app.post("/api/projects/:projectId/containers", async (req, res) => {
+    try {
+      const containerData = insertContainerSchema.parse({
+        ...req.body,
+        projectId: req.params.projectId,
+      });
+      
+      // Generate JWT token for the container
+      const jwtToken = generateAgentToken(containerData.projectId);
+      
+      const container = await storage.createContainer({
+        ...containerData,
+        jwtToken,
+      });
+      
+      // Here we would integrate with GKE to create the actual container
+      // For now, just return the created container record
+      res.status(201).json(container);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid container data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to create container" });
+    }
+  });
+
+  app.get("/api/containers/:id", async (req, res) => {
+    try {
+      const container = await storage.getContainer(req.params.id);
+      if (!container) {
+        return res.status(404).json({ message: "Container not found" });
+      }
+      res.json(container);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch container" });
+    }
+  });
+
+  app.patch("/api/containers/:id", async (req, res) => {
+    try {
+      const container = await storage.updateContainer(req.params.id, req.body);
+      res.json(container);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to update container" });
+    }
+  });
+
+  app.delete("/api/containers/:id", async (req, res) => {
+    try {
+      await storage.deleteContainer(req.params.id);
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ message: "Failed to delete container" });
     }
   });
 

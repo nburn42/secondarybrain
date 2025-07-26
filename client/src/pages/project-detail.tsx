@@ -32,6 +32,7 @@ export default function ProjectDetail() {
   const projectId = params?.id;
   const [isTaskDialogOpen, setIsTaskDialogOpen] = useState(false);
   const [isRepoDialogOpen, setIsRepoDialogOpen] = useState(false);
+  const [isContainerDialogOpen, setIsContainerDialogOpen] = useState(false);
   const { toast } = useToast();
 
   const { data: project, isLoading } = useQuery({
@@ -46,6 +47,11 @@ export default function ProjectDetail() {
 
   const { data: tasks } = useQuery({
     queryKey: ["/api/projects", projectId, "tasks"],
+    enabled: !!projectId,
+  });
+
+  const { data: containers } = useQuery({
+    queryKey: ["/api/projects", projectId, "containers"],
     enabled: !!projectId,
   });
 

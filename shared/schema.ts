@@ -3,6 +3,7 @@ import { pgTable, text, varchar, timestamp, pgEnum, integer, boolean, real, json
 import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
+import { nanoid } from "nanoid";
 
 export const taskStatusEnum = pgEnum("task_status", [
   "pending",
@@ -82,6 +83,7 @@ export const taskItems = pgTable("task_items", {
 export const projectsRelations = relations(projects, ({ many }) => ({
   repositories: many(githubRepositories),
   tasks: many(tasks),
+  containers: many(containers),
 }));
 
 export const githubRepositoriesRelations = relations(githubRepositories, ({ one }) => ({
@@ -194,3 +196,33 @@ export type TaskWithProjectAndChildren = Task & {
   project: Project;
   children: Task[];
 };
+
+// Container schema for GKE containers
+export const containers = pgTable("containers", {
+  id: text("id").primaryKey().$defaultFn(() => nanoid()),
+  projectId: text("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  status: text("status", { enum: ["pending", "running", "completed", "failed"] }).notNull().default("pending"),
+  imageTag: text("image_tag").notNull(),
+  jwtToken: text("jwt_token").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  startedAt: timestamp("started_at"),
+  completedAt: timestamp("completed_at"),
+  logs: text("logs"),
+  exitCode: integer("exit_code"),
+});
+
+export const containerRelations = relations(containers, ({ one }) => ({
+  project: one(projects, { fields: [containers.projectId], references: [projects.id] }),
+}));
+
+export const insertContainerSchema = createInsertSchema(containers).omit({
+  id: true,
+  createdAt: true,
+  startedAt: true,
+  completedAt: true,
+  jwtToken: true,
+});
+
+export type Container = typeof containers.$inferSelect;
+export type InsertContainer = z.infer<typeof insertContainerSchema>;

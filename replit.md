@@ -187,3 +187,13 @@ Preferred communication style: Simple, everyday language.
   - **Agent Integration**: Decrypted tokens passed to agent containers for private repo cloning
   - **API**: PUT /api/repositories/:id/auth endpoint for setting authentication
   - **Clone Support**: Agent automatically uses authentication for private repositories
+
+- **GKE Container Management System**: Full container orchestration for agent execution - January 2025
+  - **Database**: New containers table with status tracking, JWT tokens, and execution metadata
+  - **GCP Integration**: Build and deployment scripts for Google Kubernetes Engine (GKE)
+  - **Docker Registry**: Automated build/push pipeline to us-west2-docker.pkg.dev/neuronotify/neuronotifyagent
+  - **API**: Complete CRUD operations for container lifecycle management
+  - **UI**: Container cards showing status, logs, duration, and execution details
+  - **Authentication**: JWT-based secure communication between containers and backend
+  - **Scripts**: build-agent.sh and deploy-container.sh for automated container deployment
+  - **Project Integration**: Each project can have multiple containers with independent execution

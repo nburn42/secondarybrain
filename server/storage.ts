@@ -3,6 +3,7 @@ import {
   githubRepositories, 
   tasks, 
   taskItems,
+  containers,
   type Project, 
   type InsertProject,
   type GithubRepository,
@@ -12,6 +13,8 @@ import {
   type InsertTask,
   type TaskItem,
   type InsertTaskItem,
+  type Container,
+  type InsertContainer,
   type ProjectWithRelations,
   type TaskWithProject,
   type TaskWithChildren,
@@ -59,6 +62,13 @@ export interface IStorage {
   // Approvals (from task items)
   getPendingApprovals(): Promise<TaskItem[]>;
   processTaskItemApproval(id: string, isApproved: boolean, rejectionReason?: string): Promise<void>;
+  
+  // Containers
+  getContainersByProject(projectId: string): Promise<Container[]>;
+  getContainer(id: string): Promise<Container | undefined>;
+  createContainer(container: InsertContainer): Promise<Container>;
+  updateContainer(id: string, updates: Partial<InsertContainer>): Promise<Container>;
+  deleteContainer(id: string): Promise<void>;
   
   // Dashboard Stats
   getDashboardStats(): Promise<{
@@ -378,6 +388,37 @@ export class DatabaseStorage implements IStorage {
       .where(eq(githubRepositories.id, id))
       .returning();
     return repo;
+  }
+
+  // Container operations
+  async getContainersByProject(projectId: string): Promise<Container[]> {
+    return await db.select().from(containers).where(eq(containers.projectId, projectId));
+  }
+
+  async getContainer(id: string): Promise<Container | undefined> {
+    const [container] = await db.select().from(containers).where(eq(containers.id, id));
+    return container || undefined;
+  }
+
+  async createContainer(container: InsertContainer): Promise<Container> {
+    const [newContainer] = await db
+      .insert(containers)
+      .values(container)
+      .returning();
+    return newContainer;
+  }
+
+  async updateContainer(id: string, updates: Partial<InsertContainer>): Promise<Container> {
+    const [container] = await db
+      .update(containers)
+      .set(updates)
+      .where(eq(containers.id, id))
+      .returning();
+    return container;
+  }
+
+  async deleteContainer(id: string): Promise<void> {
+    await db.delete(containers).where(eq(containers.id, id));
   }
 }
 
