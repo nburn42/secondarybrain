@@ -1,264 +1,271 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import Header from "@/components/layout/header";
-import SwipeCard from "@/components/swipe-card";
-import { ApprovalQueueWithTask } from "@shared/schema";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { apiRequest } from "@/lib/queryClient";
-import { queryClient } from "@/lib/queryClient";
+import { CheckCircle, X, Shuffle, Clock, AlertTriangle } from "lucide-react";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { CheckCircle, X, Check, Clock } from "lucide-react";
+import Header from "@/components/layout/header";
+import SwipeApprovalCard from "@/components/swipe-approval-card";
+
+interface ApprovalItem {
+  id: string;
+  taskId: string;
+  type: string;
+  title: string;
+  content: string;
+  createdAt: string;
+  needsApproval: boolean;
+  isApproved: boolean | null;
+  task?: {
+    title: string;
+    project: {
+      name: string;
+    };
+  };
+}
 
 export default function Approvals() {
-  const [isSwipeModalOpen, setIsSwipeModalOpen] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [swipeMode, setSwipeMode] = useState(false);
   const { toast } = useToast();
 
-  const { data: approvals, isLoading } = useQuery({
+  const { data: approvals = [], isLoading } = useQuery({
     queryKey: ["/api/approvals"],
   });
 
-  const processApprovalMutation = useMutation({
-    mutationFn: async ({ id, isApproved, notes }: { id: string; isApproved: boolean; notes?: string }) => {
-      return await apiRequest("POST", `/api/approvals/${id}/process`, {
-        isApproved,
-        notes,
-        reviewedBy: "Current User", // In a real app, this would come from auth
-      });
+  const approveMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return await apiRequest("POST", `/api/task-items/${id}/approve`, {});
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/approvals"] });
       queryClient.invalidateQueries({ queryKey: ["/api/dashboard/stats"] });
       toast({
-        title: "Success",
-        description: "Approval processed successfully",
+        title: "Approved",
+        description: "Item has been approved successfully",
       });
+      moveToNext();
     },
     onError: () => {
       toast({
         title: "Error",
-        description: "Failed to process approval",
+        description: "Failed to approve item",
         variant: "destructive",
       });
     },
   });
 
-  const handleApprove = async (approval: ApprovalQueueWithTask) => {
-    await processApprovalMutation.mutateAsync({ 
-      id: approval.id, 
-      isApproved: true,
-      notes: "Approved via swipe interface"
-    });
-    moveToNext();
-  };
-
-  const handleReject = async (approval: ApprovalQueueWithTask) => {
-    await processApprovalMutation.mutateAsync({ 
-      id: approval.id, 
-      isApproved: false,
-      notes: "Rejected via swipe interface"
-    });
-    moveToNext();
-  };
+  const rejectMutation = useMutation({
+    mutationFn: async ({ id, reason }: { id: string; reason: string }) => {
+      return await apiRequest("POST", `/api/task-items/${id}/reject`, { reason });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/approvals"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/stats"] });
+      toast({
+        title: "Rejected",
+        description: "Item has been rejected",
+      });
+      moveToNext();
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to reject item",
+        variant: "destructive",
+      });
+    },
+  });
 
   const moveToNext = () => {
-    if (approvals && currentIndex < approvals.length - 1) {
+    if (currentIndex < approvals.length - 1) {
       setCurrentIndex(currentIndex + 1);
     } else {
-      setIsSwipeModalOpen(false);
       setCurrentIndex(0);
     }
   };
 
-  const handleQuickApprove = async (approval: ApprovalQueueWithTask) => {
-    await processApprovalMutation.mutateAsync({ 
-      id: approval.id, 
-      isApproved: true,
-      notes: "Quick approval"
-    });
+  const handleApprove = (id: string) => {
+    approveMutation.mutate(id);
   };
 
-  const handleQuickReject = async (approval: ApprovalQueueWithTask) => {
-    await processApprovalMutation.mutateAsync({ 
-      id: approval.id, 
-      isApproved: false,
-      notes: "Quick rejection"
-    });
+  const handleReject = (id: string, reason: string) => {
+    rejectMutation.mutate({ id, reason });
+  };
+
+  const getTypeIcon = (type: string) => {
+    switch (type) {
+      case "tool_call":
+        return <AlertTriangle className="h-4 w-4" />;
+      case "file_creation":
+        return <AlertTriangle className="h-4 w-4" />;
+      default:
+        return <Clock className="h-4 w-4" />;
+    }
+  };
+
+  const getTypeColor = (type: string) => {
+    switch (type) {
+      case "tool_call":
+        return "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200";
+      case "file_creation":
+        return "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200";
+      default:
+        return "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200";
+    }
   };
 
   if (isLoading) {
     return (
-      <div className="flex-1">
-        <Header 
-          title="Approval Queue" 
-          subtitle="Review and approve pending tasks"
-        />
-        <main className="flex-1 px-6 py-6">
-          <div className="space-y-4">
-            {[...Array(3)].map((_, i) => (
-              <div key={i} className="bg-white rounded-xl shadow-sm p-6 border border-gray-100 animate-pulse">
-                <div className="flex items-center justify-between">
-                  <div className="flex-1">
-                    <div className="h-4 bg-gray-200 rounded w-48 mb-2"></div>
-                    <div className="h-3 bg-gray-200 rounded w-32"></div>
-                  </div>
-                  <div className="flex space-x-2">
-                    <div className="w-8 h-8 bg-gray-200 rounded-lg"></div>
-                    <div className="w-8 h-8 bg-gray-200 rounded-lg"></div>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </main>
+      <div className="container mx-auto p-4 lg:p-6">
+        <Header title="Approvals" />
+        <div className="flex items-center justify-center h-64">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        </div>
       </div>
     );
   }
 
-  return (
-    <div className="flex-1">
-      <Header 
-        title="Approval Queue" 
-        subtitle="Review and approve pending tasks"
-      />
-      
-      <main className="flex-1 px-6 py-6">
-        {approvals && approvals.length > 0 ? (
-          <>
-            {/* Quick Actions Header */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 mb-6">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-4">
-                  <Clock className="w-5 h-5 text-warning" />
-                  <span className="font-medium text-gray-900">
-                    {approvals.length} tasks pending approval
-                  </span>
-                </div>
-                <Button 
-                  onClick={() => setIsSwipeModalOpen(true)}
-                  className="bg-primary hover:bg-blue-700"
-                >
-                  Open Swipe Interface
-                </Button>
-              </div>
-            </div>
+  if (!approvals || approvals.length === 0) {
+    return (
+      <div className="container mx-auto p-4 lg:p-6">
+        <Header title="Approvals" />
+        <Card className="max-w-md mx-auto">
+          <CardHeader className="text-center">
+            <CheckCircle className="h-12 w-12 text-green-500 mx-auto mb-4" />
+            <CardTitle>All caught up!</CardTitle>
+            <CardDescription>
+              No pending approvals at the moment. New items will appear here when they need your review.
+            </CardDescription>
+          </CardHeader>
+        </Card>
+      </div>
+    );
+  }
 
-            {/* Approval List */}
-            <div className="space-y-4">
-              {approvals.map((approval: ApprovalQueueWithTask) => (
-                <div key={approval.id} className="bg-white rounded-xl shadow-sm border border-gray-100">
-                  <div className="border-l-4 border-warning pl-6 pr-6 py-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex-1">
-                        <h4 className="font-medium text-gray-900 mb-1">{approval.task.title}</h4>
-                        <p className="text-sm text-gray-600 mb-2">
-                          {approval.task.description}
-                        </p>
-                        <div className="flex items-center space-x-4 text-xs text-gray-500">
-                          <span className="flex items-center">
-                            <span className="w-2 h-2 bg-primary rounded-full mr-2"></span>
-                            {approval.task.project.name}
-                          </span>
-                          <span>Priority: {approval.task.priority}</span>
-                          <span>Author: {approval.task.authorName}</span>
-                          <span>
-                            Submitted {new Date(approval.submittedAt).toLocaleDateString()}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="flex items-center space-x-2 ml-4">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleQuickReject(approval)}
-                          disabled={processApprovalMutation.isPending}
-                          className="text-error hover:bg-red-50 border-red-200"
-                        >
-                          <X className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleQuickApprove(approval)}
-                          disabled={processApprovalMutation.isPending}
-                          className="text-accent hover:bg-green-50 border-green-200"
-                        >
-                          <Check className="w-4 h-4" />
-                        </Button>
-                      </div>
+  const currentItem = approvals[currentIndex];
+
+  return (
+    <div className="container mx-auto p-4 lg:p-6 max-w-2xl">
+      <Header title="Approvals" />
+      
+      {/* Mode Toggle */}
+      <div className="flex justify-center mb-6">
+        <div className="flex bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
+          <Button
+            variant={!swipeMode ? "default" : "ghost"}
+            size="sm"
+            onClick={() => setSwipeMode(false)}
+            className="text-xs"
+          >
+            List View
+          </Button>
+          <Button
+            variant={swipeMode ? "default" : "ghost"}
+            size="sm"
+            onClick={() => setSwipeMode(true)}
+            className="text-xs"
+          >
+            <Shuffle className="h-4 w-4 mr-1" />
+            Swipe Mode
+          </Button>
+        </div>
+      </div>
+
+      {swipeMode ? (
+        /* Swipe Mode */
+        <div className="space-y-6">
+          <div className="text-center">
+            <p className="text-sm text-gray-600 dark:text-gray-400">
+              {currentIndex + 1} of {approvals.length} pending approvals
+            </p>
+          </div>
+
+          {currentItem && (
+            <SwipeApprovalCard
+              item={currentItem}
+              onApprove={handleApprove}
+              onReject={handleReject}
+              onSkip={moveToNext}
+            />
+          )}
+
+          {/* Navigation */}
+          <div className="flex justify-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentIndex(Math.max(0, currentIndex - 1))}
+              disabled={currentIndex === 0}
+            >
+              Previous
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={moveToNext}
+              disabled={currentIndex === approvals.length - 1}
+            >
+              Next
+            </Button>
+          </div>
+        </div>
+      ) : (
+        /* List Mode */
+        <div className="space-y-4">
+          {approvals.map((item: ApprovalItem) => (
+            <Card key={item.id} className="border-l-4 border-l-orange-400">
+              <CardHeader className="pb-3">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <CardTitle className="text-lg">{item.title}</CardTitle>
+                    {item.task && (
+                      <CardDescription>
+                        {item.task.project.name} • {item.task.title}
+                      </CardDescription>
+                    )}
+                  </div>
+                  <div className={`px-2 py-1 rounded-full text-xs font-medium ${getTypeColor(item.type)}`}>
+                    <div className="flex items-center gap-1">
+                      {getTypeIcon(item.type)}
+                      {item.type.replace("_", " ")}
                     </div>
                   </div>
                 </div>
-              ))}
-            </div>
-
-            {/* Swipe Interface Modal */}
-            <Dialog open={isSwipeModalOpen} onOpenChange={setIsSwipeModalOpen}>
-              <DialogContent className="max-w-md">
-                <div className="p-6">
-                  <div className="flex items-center justify-between mb-6">
-                    <h3 className="text-xl font-semibold text-gray-900">Task Approval</h3>
-                    <Button 
-                      variant="ghost" 
-                      size="sm"
-                      onClick={() => setIsSwipeModalOpen(false)}
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3">
+                    <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
+                      {item.content || "No content provided"}
+                    </p>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      onClick={() => handleReject(item.id, "Rejected from list view")}
+                      disabled={rejectMutation.isPending}
+                      className="flex-1"
                     >
-                      <X className="w-6 h-6" />
+                      <X className="h-4 w-4 mr-2" />
+                      Reject
+                    </Button>
+                    <Button
+                      onClick={() => handleApprove(item.id)}
+                      disabled={approveMutation.isPending}
+                      className="flex-1"
+                    >
+                      <CheckCircle className="h-4 w-4 mr-2" />
+                      Approve
                     </Button>
                   </div>
-                  
-                  {approvals[currentIndex] && (
-                    <>
-                      <SwipeCard
-                        approval={approvals[currentIndex]}
-                        onApprove={() => handleApprove(approvals[currentIndex])}
-                        onReject={() => handleReject(approvals[currentIndex])}
-                      />
-                      
-                      {/* Action Buttons */}
-                      <div className="flex space-x-4">
-                        <Button 
-                          className="flex-1 bg-error hover:bg-red-600 text-white"
-                          onClick={() => handleReject(approvals[currentIndex])}
-                          disabled={processApprovalMutation.isPending}
-                        >
-                          <X className="w-5 h-5 mr-2" />
-                          Reject
-                        </Button>
-                        <Button 
-                          className="flex-1 bg-accent hover:bg-green-600 text-white"
-                          onClick={() => handleApprove(approvals[currentIndex])}
-                          disabled={processApprovalMutation.isPending}
-                        >
-                          <Check className="w-5 h-5 mr-2" />
-                          Approve
-                        </Button>
-                      </div>
-                      
-                      <div className="mt-4 text-center">
-                        <span className="text-sm text-gray-500">
-                          {currentIndex + 1} of {approvals.length} tasks remaining
-                        </span>
-                      </div>
-                    </>
-                  )}
                 </div>
-              </DialogContent>
-            </Dialog>
-          </>
-        ) : (
-          <div className="text-center py-12">
-            <CheckCircle className="w-24 h-24 mx-auto mb-6 text-gray-300" />
-            <h3 className="text-xl font-semibold text-gray-900 mb-2">
-              No pending approvals
-            </h3>
-            <p className="text-gray-500 mb-6">
-              All tasks have been reviewed. Great job!
-            </p>
-          </div>
-        )}
-      </main>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

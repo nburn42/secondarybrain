@@ -8,7 +8,7 @@ import Dashboard from "@/pages/dashboard";
 import Projects from "@/pages/projects";
 import ProjectDetail from "@/pages/project-detail";
 import Repositories from "@/pages/repositories";
-import Approvals from "@/pages/approvals-new";
+import Approvals from "@/pages/approvals";
 import Tasks from "@/pages/tasks";
 import Sidebar from "@/components/layout/sidebar";
 import PWAInstallPrompt from "@/components/pwa-install-prompt";
