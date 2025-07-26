@@ -2,6 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertProjectSchema, insertTaskSchema, insertGithubRepositorySchema, insertGlobalRepositorySchema, insertTaskItemSchema } from "@shared/schema";
+import { generateAgentToken, verifyAgentToken, extractTokenFromRequest } from "./auth";
 import { z } from "zod";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -187,6 +188,59 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(parentTasks);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch parent tasks" });
+    }
+  });
+
+  // Agent Authentication
+  app.post("/api/projects/:projectId/agent-token", async (req, res) => {
+    try {
+      const { projectId } = req.params;
+      const { taskId } = req.body;
+
+      // Verify project exists
+      const project = await storage.getProject(projectId);
+      if (!project) {
+        return res.status(404).json({ message: "Project not found" });
+      }
+
+      // Generate JWT token for agent
+      const token = generateAgentToken(projectId, taskId);
+      
+      res.json({ 
+        token,
+        project_id: projectId,
+        task_id: taskId,
+        expires_in: 24 * 60 * 60 // 24 hours in seconds
+      });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to generate agent token" });
+    }
+  });
+
+  // Protected agent endpoints
+  const authenticateAgent = (req: any, res: any, next: any) => {
+    const token = extractTokenFromRequest(req.headers.authorization);
+    if (!token) {
+      return res.status(401).json({ message: "No token provided" });
+    }
+
+    const payload = verifyAgentToken(token);
+    if (!payload) {
+      return res.status(401).json({ message: "Invalid token" });
+    }
+
+    req.agent = payload;
+    next();
+  };
+
+  // Agent-specific repository endpoint
+  app.get("/api/agent/repositories", authenticateAgent, async (req: any, res) => {
+    try {
+      const { project_id } = req.agent;
+      const repositories = await storage.getRepositoriesByProject(project_id);
+      res.json(repositories);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch repositories" });
     }
   });
 

@@ -165,3 +165,17 @@ Preferred communication style: Simple, everyday language.
   - **Storage**: Methods for querying parent tasks with children and task hierarchies
   - **Types**: Extended types for TaskWithChildren and TaskWithProjectAndChildren
   - **Use Case**: Enables breaking down complex tasks into subtasks with proper hierarchy
+
+- **Separate Repositories Tab**: Implemented independent repository management - January 2025
+  - **Database**: Modified github_repositories table to support global repositories (optional projectId, added owner field)
+  - **API**: New endpoints `/api/repositories` for global repository CRUD operations
+  - **UI**: Separate repositories page with GitHub URL auto-parsing and repository cards
+  - **Navigation**: Added repositories tab to sidebar with GitBranch icon
+  - **Functionality**: Repository creation form with owner/name auto-extraction from GitHub URLs
+
+- **Agent Container Infrastructure**: Created Docker-based agent execution system - January 2025
+  - **Container**: Python-based Docker container with git, requests, and JWT support
+  - **Authentication**: JWT token system for secure agent-to-API communication
+  - **Workspace**: Agent clones project repositories into `/workspace` directory
+  - **API**: Protected agent endpoints for repository access with JWT authentication
+  - **Structure**: Complete agent-container subdirectory with Dockerfile, requirements, and scripts

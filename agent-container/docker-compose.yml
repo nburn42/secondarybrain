@@ -1,0 +1,22 @@
+version: '3.8'
+
+services:
+  task-agent:
+    build: .
+    environment:
+      - JWT_TOKEN=${JWT_TOKEN}
+      - API_BASE_URL=http://host.docker.internal:5000
+      - WORKSPACE_DIR=/workspace
+    volumes:
+      - workspace_data:/workspace
+    networks:
+      - agent-network
+    depends_on:
+      - host.docker.internal
+
+volumes:
+  workspace_data:
+
+networks:
+  agent-network:
+    driver: bridge
