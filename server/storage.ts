@@ -174,7 +174,6 @@ export class DatabaseStorage implements IStorage {
         ...insertTask,
         updatedAt: new Date(),
         ...(insertTask.status === "completed" && { completedAt: new Date() }),
-        ...(insertTask.status === "approved" && { approvedAt: new Date() }),
       })
       .where(eq(tasks.id, id))
       .returning();

@@ -151,3 +151,9 @@ Preferred communication style: Simple, everyday language.
   - **Approval Process**: `/api/task-items/:id/approve` endpoint processes approvals and creates rejection task items
   - **Dashboard**: Updated stats query to count pending approvals from task items instead of approval queue
   - **Rationale**: Eliminated redundant table, simplified data model while maintaining full approval functionality
+
+- **Task Status Simplification**: Removed approval-related statuses from tasks - January 2025
+  - **Status Enum**: Updated task_status to only include: pending, running, completed, failed
+  - **Database**: Removed approvedAt and rejectionReason columns from tasks table
+  - **Logic**: Task approval logic moved entirely to task_items with needsApproval/isApproved fields
+  - **Rationale**: Tasks represent execution state, while task items handle approval workflow

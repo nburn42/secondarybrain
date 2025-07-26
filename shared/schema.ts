@@ -6,9 +6,6 @@ import { z } from "zod";
 
 export const taskStatusEnum = pgEnum("task_status", [
   "pending",
-  "awaiting_approval", 
-  "approved",
-  "rejected",
   "running",
   "completed",
   "failed"
@@ -53,9 +50,7 @@ export const tasks = pgTable("tasks", {
   authorName: text("author_name").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
-  approvedAt: timestamp("approved_at"),
   completedAt: timestamp("completed_at"),
-  rejectionReason: text("rejection_reason"),
 });
 
 export const taskItems = pgTable("task_items", {
@@ -131,7 +126,6 @@ export const insertTaskSchema = createInsertSchema(tasks).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
-  approvedAt: true,
   completedAt: true,
 }).extend({
   priority: z.number().min(0).max(10).default(1.0),
