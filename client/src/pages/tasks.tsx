@@ -24,7 +24,11 @@ export default function Tasks() {
                          task.project.name.toLowerCase().includes(searchTerm.toLowerCase());
     
     const matchesStatus = statusFilter === "all" || task.status === statusFilter;
-    const matchesPriority = priorityFilter === "all" || task.priority === priorityFilter;
+    let matchesPriority = true;
+    
+    if (priorityFilter === "high") matchesPriority = task.priority >= 5;
+    else if (priorityFilter === "medium") matchesPriority = task.priority >= 2 && task.priority < 5;
+    else if (priorityFilter === "low") matchesPriority = task.priority < 2;
     
     return matchesSearch && matchesStatus && matchesPriority;
   });
@@ -123,10 +127,9 @@ export default function Tasks() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Priority</SelectItem>
-                  <SelectItem value="low">Low</SelectItem>
-                  <SelectItem value="medium">Medium</SelectItem>
-                  <SelectItem value="high">High</SelectItem>
-                  <SelectItem value="critical">Critical</SelectItem>
+                  <SelectItem value="low">Low (0-2)</SelectItem>
+                  <SelectItem value="medium">Medium (2-5)</SelectItem>
+                  <SelectItem value="high">High (5+)</SelectItem>
                 </SelectContent>
               </Select>
             </div>

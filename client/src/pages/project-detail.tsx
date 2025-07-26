@@ -55,7 +55,7 @@ export default function ProjectDetail() {
       title: "",
       description: "",
       status: "pending",
-      priority: "medium",
+      priority: 1.0,
       estimatedHours: 0,
       authorName: "",
       projectId: projectId || "",
@@ -376,20 +376,18 @@ export default function ProjectDetail() {
                     name="priority"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Priority</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select priority" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="low">Low</SelectItem>
-                            <SelectItem value="medium">Medium</SelectItem>
-                            <SelectItem value="high">High</SelectItem>
-                            <SelectItem value="critical">Critical</SelectItem>
-                          </SelectContent>
-                        </Select>
+                        <FormLabel>Priority (0-10)</FormLabel>
+                        <FormControl>
+                          <Input 
+                            type="number" 
+                            step="0.1"
+                            min="0"
+                            max="10"
+                            placeholder="1.0"
+                            {...field}
+                            onChange={(e) => field.onChange(parseFloat(e.target.value) || 1.0)}
+                          />
+                        </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}

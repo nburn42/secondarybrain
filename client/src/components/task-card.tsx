@@ -30,19 +30,11 @@ export default function TaskCard({ task, showProject = false, onEdit, onDelete }
     }
   };
 
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case 'critical':
-        return 'text-red-600';
-      case 'high':
-        return 'text-warning';
-      case 'medium':
-        return 'text-blue-600';
-      case 'low':
-        return 'text-gray-600';
-      default:
-        return 'text-gray-600';
-    }
+  const getPriorityColor = (priority: number) => {
+    if (priority >= 8) return 'text-red-600';
+    if (priority >= 5) return 'text-warning';
+    if (priority >= 2) return 'text-blue-600';
+    return 'text-gray-600';
   };
 
   return (
@@ -60,7 +52,7 @@ export default function TaskCard({ task, showProject = false, onEdit, onDelete }
           )}
           <div className="flex items-center text-xs text-gray-500 space-x-4">
             <span className={getPriorityColor(task.priority)}>
-              Priority: {task.priority}
+              Priority: {task.priority.toFixed(1)}
             </span>
             {task.estimatedHours && (
               <span>Estimate: {task.estimatedHours} hours</span>

@@ -16,7 +16,7 @@ import {
   type ApprovalQueueWithTask
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, and, isNull } from "drizzle-orm";
+import { eq, desc, and, isNull, sql } from "drizzle-orm";
 
 export interface IStorage {
   // Projects

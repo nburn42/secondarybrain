@@ -29,7 +29,7 @@ Preferred communication style: Simple, everyday language.
 
 ### Database Design
 - **Projects**: Core entity with name, description, status, and timestamps
-- **Tasks**: Linked to projects with status, priority, and approval workflow
+- **Tasks**: Linked to projects with status, numeric priority (0-10 scale), and approval workflow
 - **GitHub Repositories**: Associated with projects for code integration
 - **Approval Queue**: Manages task approval workflow with reviewer tracking
 
@@ -123,3 +123,11 @@ Preferred communication style: Simple, everyday language.
 5. **Approval Workflow**: Swipe-based interface for mobile-first design
    - **Rationale**: Modern, intuitive interaction pattern for approval decisions
    - **Implementation**: Framer Motion provides smooth gesture handling
+
+### Recent Changes
+
+- **Priority System**: Changed task priority from enum values (low/medium/high/critical) to numeric float values (0-10 scale) - January 2025
+  - **UI Updates**: Task forms now use numeric input with 0.1 step increments
+  - **Display**: Priority values shown with one decimal place (e.g., "Priority: 5.0")
+  - **Filtering**: Priority filters categorized as Low (0-2), Medium (2-5), High (5+)
+  - **Color Coding**: Red for 8+, Yellow for 5+, Blue for 2+, Gray for below 2

@@ -30,29 +30,18 @@ export default function SwipeCard({ approval, onApprove, onReject }: SwipeCardPr
     }
   };
 
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case 'critical':
-        return 'text-red-600';
-      case 'high':
-        return 'text-warning';
-      case 'medium':
-        return 'text-blue-600';
-      case 'low':
-        return 'text-gray-600';
-      default:
-        return 'text-gray-600';
-    }
+  const getPriorityColor = (priority: number) => {
+    if (priority >= 8) return 'text-red-600';
+    if (priority >= 5) return 'text-warning';
+    if (priority >= 2) return 'text-blue-600';
+    return 'text-gray-600';
   };
 
-  const getPriorityIcon = (priority: string) => {
-    switch (priority) {
-      case 'critical':
-      case 'high':
-        return <Zap className="w-3 h-3" />;
-      default:
-        return <Clock className="w-3 h-3" />;
+  const getPriorityIcon = (priority: number) => {
+    if (priority >= 5) {
+      return <Zap className="w-3 h-3" />;
     }
+    return <Clock className="w-3 h-3" />;
   };
 
   return (
@@ -94,7 +83,7 @@ export default function SwipeCard({ approval, onApprove, onReject }: SwipeCardPr
               <span className="text-gray-500 w-20">Priority:</span>
               <span className={`font-medium flex items-center gap-1 ${getPriorityColor(approval.task.priority)}`}>
                 {getPriorityIcon(approval.task.priority)}
-                {approval.task.priority}
+                {approval.task.priority.toFixed(1)}
               </span>
             </div>
             {approval.task.estimatedHours && (

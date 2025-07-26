@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, timestamp, pgEnum, integer, boolean } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, timestamp, pgEnum, integer, boolean, real } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -12,13 +12,6 @@ export const taskStatusEnum = pgEnum("task_status", [
   "running",
   "completed",
   "failed"
-]);
-
-export const taskPriorityEnum = pgEnum("task_priority", [
-  "low",
-  "medium", 
-  "high",
-  "critical"
 ]);
 
 export const projects = pgTable("projects", {
@@ -47,7 +40,7 @@ export const tasks = pgTable("tasks", {
   title: text("title").notNull(),
   description: text("description"),
   status: taskStatusEnum("status").notNull().default("pending"),
-  priority: taskPriorityEnum("priority").notNull().default("medium"),
+  priority: real("priority").notNull().default(1.0),
   estimatedHours: integer("estimated_hours"),
   authorName: text("author_name").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -114,6 +107,8 @@ export const insertTaskSchema = createInsertSchema(tasks).omit({
   updatedAt: true,
   approvedAt: true,
   completedAt: true,
+}).extend({
+  priority: z.number().min(0).max(10).default(1.0),
 });
 
 export const insertApprovalQueueSchema = createInsertSchema(approvalQueue).omit({
