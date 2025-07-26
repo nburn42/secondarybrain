@@ -11,6 +11,7 @@ import Repositories from "@/pages/repositories";
 import Approvals from "@/pages/approvals";
 import Tasks from "@/pages/tasks";
 import Sidebar from "@/components/layout/sidebar";
+import PWAInstallPrompt from "@/components/pwa-install-prompt";
 
 function Router() {
   return (
@@ -37,6 +38,7 @@ function App() {
       <TooltipProvider>
         <Toaster />
         <Router />
+        <PWAInstallPrompt />
       </TooltipProvider>
     </QueryClientProvider>
   );
