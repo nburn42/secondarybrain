@@ -24,11 +24,7 @@ export default function Repositories() {
 
   const createMutation = useMutation({
     mutationFn: (data: InsertGlobalRepository) => 
-      apiRequest("/api/repositories", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      }),
+      apiRequest("POST", "/api/repositories", data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/repositories"] });
       setIsDialogOpen(false);
@@ -49,9 +45,7 @@ export default function Repositories() {
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) =>
-      apiRequest(`/api/repositories/${id}`, {
-        method: "DELETE",
-      }),
+      apiRequest("DELETE", `/api/repositories/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/repositories"] });
       toast({
