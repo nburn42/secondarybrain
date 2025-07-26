@@ -1,5 +1,6 @@
 import { Link, useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
 import { 
   LayoutDashboard, 
   FolderOpen, 
@@ -7,11 +8,15 @@ import {
   ClipboardList,
   GitBranch,
   Plus,
-  Circle
+  Circle,
+  Menu,
+  X
 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 export default function Sidebar() {
   const [location] = useLocation();
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   
   const { data: stats } = useQuery({
     queryKey: ["/api/dashboard/stats"],
@@ -57,22 +62,59 @@ export default function Sidebar() {
   ];
 
   return (
-    <div className="fixed inset-y-0 left-0 w-64 bg-white shadow-lg z-50">
-      <div className="flex items-center px-6 py-4 border-b border-gray-200">
-        <div className="flex-shrink-0">
-          <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-            <span className="text-white font-bold text-sm">NN</span>
+    <>
+      {/* Mobile menu button */}
+      <div className="lg:hidden fixed top-0 left-0 right-0 z-50 bg-white border-b border-gray-200 px-4 py-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center">
+            <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center mr-3">
+              <span className="text-white font-bold text-sm">NN</span>
+            </div>
+            <h1 className="text-lg font-semibold text-gray-900">Neural Notify</h1>
           </div>
-        </div>
-        <div className="ml-3">
-          <h1 className="text-lg font-semibold text-gray-900">Neural Notify</h1>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+          >
+            {isMobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+          </Button>
         </div>
       </div>
+
+      {/* Mobile menu overlay */}
+      {isMobileMenuOpen && (
+        <div 
+          className="lg:hidden fixed inset-0 z-40 bg-black bg-opacity-50"
+          onClick={() => setIsMobileMenuOpen(false)}
+        />
+      )}
+
+      {/* Sidebar */}
+      <div className={`
+        fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-lg transform transition-transform duration-300 ease-in-out
+        ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}
+        lg:translate-x-0 lg:static lg:inset-0
+      `}>
+        <div className="flex items-center px-6 py-4 border-b border-gray-200 lg:block hidden">
+          <div className="flex-shrink-0">
+            <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
+              <span className="text-white font-bold text-sm">NN</span>
+            </div>
+          </div>
+          <div className="ml-3">
+            <h1 className="text-lg font-semibold text-gray-900">Neural Notify</h1>
+          </div>
+        </div>
       
-      <nav className="mt-6 px-3">
-        <div className="space-y-1">
-          {navItems.map((item) => (
-            <Link key={item.name} href={item.href}>
+        <nav className="mt-6 px-3 pt-16 lg:pt-0">
+          <div className="space-y-1">
+            {navItems.map((item) => (
+              <Link 
+                key={item.name} 
+                href={item.href}
+                onClick={() => setIsMobileMenuOpen(false)}
+              >
               <a className={`
                 ${item.current 
                   ? 'bg-blue-50 text-primary' 
@@ -115,7 +157,8 @@ export default function Sidebar() {
             </a>
           </Link>
         </div>
+        </div>
       </div>
-    </div>
+    </>
   );
 }

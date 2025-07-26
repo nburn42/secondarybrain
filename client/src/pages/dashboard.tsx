@@ -40,8 +40,8 @@ export default function Dashboard() {
           showNewButton
           onNewClick={() => setLocation("/projects")}
         />
-        <main className="flex-1 px-6 py-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <main className="flex-1 px-4 lg:px-6 py-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6 mb-8">
             {[...Array(4)].map((_, i) => (
               <div key={i} className="bg-white rounded-xl shadow-sm p-6 border border-gray-100 animate-pulse">
                 <div className="flex items-center">
@@ -68,9 +68,9 @@ export default function Dashboard() {
         onNewClick={() => setLocation("/projects")}
       />
       
-      <main className="flex-1 px-6 py-6">
+      <main className="flex-1 px-4 lg:px-6 py-6">
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6 mb-8">
           <StatsCard
             title="Total Projects"
             value={stats?.totalProjects || 0}
@@ -98,7 +98,7 @@ export default function Dashboard() {
         </div>
 
         {/* Main Content Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6 mb-8">
           {/* Recent Projects */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-100">
             <div className="p-6">

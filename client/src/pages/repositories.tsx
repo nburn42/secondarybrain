@@ -138,7 +138,7 @@ export default function Repositories() {
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-3xl font-bold">Repositories</h1>
         </div>
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 lg:gap-6">
           {[...Array(6)].map((_, i) => (
             <div key={i} className="h-32 bg-muted rounded-lg animate-pulse" />
           ))}
@@ -148,9 +148,9 @@ export default function Repositories() {
   }
 
   return (
-    <div className="p-6">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-3xl font-bold">Repositories</h1>
+    <div className="p-4 lg:p-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
+        <h1 className="text-2xl lg:text-3xl font-bold">Repositories</h1>
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
             <Button>
@@ -343,7 +343,7 @@ export default function Repositories() {
           </CardContent>
         </Card>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 lg:gap-6">
           {repositories.map((repo: GithubRepository) => (
             <Card key={repo.id} className="hover:shadow-md transition-shadow">
               <CardHeader className="pb-3">
