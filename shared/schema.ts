@@ -53,6 +53,7 @@ export const tasks = pgTable("tasks", {
   priority: real("priority").notNull().default(1.0),
   estimatedHours: integer("estimated_hours"),
   authorName: text("author_name").notNull(),
+  containerId: varchar("container_id").references(() => containers.id),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
   completedAt: timestamp("completed_at"),
@@ -68,6 +69,7 @@ export const taskItems = pgTable("task_items", {
   toolName: text("tool_name"),
   toolParameters: jsonb("tool_parameters"),
   toolResponse: jsonb("tool_response"),
+  chatResponse: text("chat_response"), // Agent's text response
   filePath: text("file_path"),
   fileContent: text("file_content"),
   needsApproval: boolean("needs_approval").default(false),

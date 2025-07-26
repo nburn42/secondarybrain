@@ -206,3 +206,13 @@ Preferred communication style: Simple, everyday language.
   - **Offline Support**: Network-first API caching and cache-first static asset strategy
   - **Mobile Optimization**: Apple touch icons, standalone mode, and mobile viewport configuration
   - **App Shortcuts**: Quick access to Dashboard, Projects, and Approvals from home screen
+
+- **Agent Task Execution Loop**: Intelligent task claiming and planner execution system - January 2025
+  - **Task Claiming**: Agents automatically claim available tasks by setting container ID to prevent conflicts
+  - **Database Schema**: Added containerId to tasks table and chatResponse field to task items
+  - **Planner Loop**: Agents build chat history from task items and execute planning conversations
+  - **Chat History**: Task items automatically convert to conversation history for LLM integration
+  - **Task Item Creation**: Agents create planning, tool call, and response task items during execution
+  - **Status Management**: Tasks automatically progress from pending → running → completed/failed
+  - **Concurrency Control**: Multiple containers can work on different tasks without conflicts
+  - **Repository Integration**: Agents clone project repositories before starting task execution
