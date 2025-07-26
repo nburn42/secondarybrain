@@ -144,3 +144,10 @@ Preferred communication style: Simple, everyday language.
   - **API**: Full CRUD operations for task items with nested children support
   - **Storage**: JSON fields for tool parameters/responses, file content, and execution metadata
   - **Approval Integration**: Task items can trigger approval workflow when creating files or making tool calls
+
+- **Approval Queue Removal**: Simplified approval system by removing separate approval_queue table - January 2025
+  - **Database**: Dropped approval_queue table, approvals now handled directly through task_items
+  - **API**: New `/api/approvals` endpoint queries task items with needsApproval=true and isApproved=null
+  - **Approval Process**: `/api/task-items/:id/approve` endpoint processes approvals and creates rejection task items
+  - **Dashboard**: Updated stats query to count pending approvals from task items instead of approval queue
+  - **Rationale**: Eliminated redundant table, simplified data model while maintaining full approval functionality

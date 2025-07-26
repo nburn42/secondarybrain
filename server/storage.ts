@@ -3,7 +3,6 @@ import {
   githubRepositories, 
   tasks, 
   taskItems,
-  approvalQueue,
   type Project, 
   type InsertProject,
   type GithubRepository,
@@ -12,13 +11,10 @@ import {
   type InsertTask,
   type TaskItem,
   type InsertTaskItem,
-  type ApprovalQueue,
-  type InsertApprovalQueue,
   type ProjectWithRelations,
   type TaskWithProject,
   type TaskWithItems,
-  type TaskItemWithChildren,
-  type ApprovalQueueWithTask
+  type TaskItemWithChildren
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, isNull, sql } from "drizzle-orm";
@@ -52,10 +48,9 @@ export interface IStorage {
   updateTaskItem(id: string, taskItem: Partial<InsertTaskItem>): Promise<TaskItem>;
   deleteTaskItem(id: string): Promise<void>;
 
-  // Approval Queue
-  getApprovalQueue(): Promise<ApprovalQueueWithTask[]>;
-  createApprovalRequest(approval: InsertApprovalQueue): Promise<ApprovalQueue>;
-  processApproval(id: string, isApproved: boolean, notes?: string, reviewedBy?: string): Promise<void>;
+  // Approvals (from task items)
+  getPendingApprovals(): Promise<TaskItem[]>;
+  processTaskItemApproval(id: string, isApproved: boolean, rejectionReason?: string): Promise<void>;
   
   // Dashboard Stats
   getDashboardStats(): Promise<{
@@ -169,13 +164,6 @@ export class DatabaseStorage implements IStorage {
       })
       .returning();
 
-    // If task requires approval, add to approval queue
-    if (insertTask.status === "awaiting_approval") {
-      await db.insert(approvalQueue).values({
-        taskId: task.id,
-      });
-    }
-
     return task;
   }
 
@@ -238,13 +226,7 @@ export class DatabaseStorage implements IStorage {
       })
       .returning();
 
-    // If task item requires approval and creates files, add to approval queue
-    if (insertTaskItem.needsApproval && (insertTaskItem.type === "file_creation" || insertTaskItem.type === "tool_call")) {
-      await db.insert(approvalQueue).values({
-        taskId: insertTaskItem.taskId,
-        taskItemId: taskItem.id,
-      });
-    }
+    // Task item approval logic is now handled by the needsApproval flag
 
     return taskItem;
   }
@@ -265,57 +247,41 @@ export class DatabaseStorage implements IStorage {
     await db.delete(taskItems).where(eq(taskItems.id, id));
   }
 
-  async getApprovalQueue(): Promise<ApprovalQueueWithTask[]> {
-    return await db.query.approvalQueue.findMany({
-      where: isNull(approvalQueue.reviewedAt),
-      with: {
-        task: {
-          with: {
-            project: true,
-          },
-        },
-        taskItem: true,
-      },
-      orderBy: [desc(approvalQueue.submittedAt)],
-    });
+  async getPendingApprovals(): Promise<TaskItem[]> {
+    return await db
+      .select()
+      .from(taskItems)
+      .where(and(
+        eq(taskItems.needsApproval, true),
+        isNull(taskItems.isApproved)
+      ))
+      .orderBy(desc(taskItems.createdAt));
   }
 
-  async createApprovalRequest(insertApproval: InsertApprovalQueue): Promise<ApprovalQueue> {
-    const [approval] = await db
-      .insert(approvalQueue)
-      .values(insertApproval)
-      .returning();
-    return approval;
-  }
-
-  async processApproval(id: string, isApproved: boolean, notes?: string, reviewedBy?: string): Promise<void> {
-    // Update approval queue
+  async processTaskItemApproval(id: string, isApproved: boolean, rejectionReason?: string): Promise<void> {
+    // Update the task item with approval status
     await db
-      .update(approvalQueue)
+      .update(taskItems)
       .set({
         isApproved,
-        notes,
-        reviewedBy,
-        reviewedAt: new Date(),
+        rejectionReason: isApproved ? null : rejectionReason,
+        updatedAt: new Date(),
       })
-      .where(eq(approvalQueue.id, id));
+      .where(eq(taskItems.id, id));
 
-    // Get the task ID from the approval queue
-    const approval = await db.query.approvalQueue.findFirst({
-      where: eq(approvalQueue.id, id),
-    });
-
-    if (approval) {
-      // Update task status
-      await db
-        .update(tasks)
-        .set({
-          status: isApproved ? "approved" : "rejected",
-          ...(isApproved && { approvedAt: new Date() }),
-          ...(!isApproved && { rejectionReason: notes }),
-          updatedAt: new Date(),
-        })
-        .where(eq(tasks.id, approval.taskId));
+    // If rejected, create a new rejection task item
+    if (!isApproved && rejectionReason) {
+      const originalItem = await this.getTaskItem(id);
+      if (originalItem) {
+        await this.createTaskItem({
+          taskId: originalItem.taskId,
+          parentId: originalItem.id,
+          type: "rejection",
+          title: "Rejection Feedback",
+          content: rejectionReason,
+          needsApproval: false,
+        });
+      }
     }
   }
 
@@ -331,8 +297,11 @@ export class DatabaseStorage implements IStorage {
 
     const [pendingApprovalsCount] = await db
       .select({ count: sql<number>`count(*)` })
-      .from(approvalQueue)
-      .where(isNull(approvalQueue.reviewedAt));
+      .from(taskItems)
+      .where(and(
+        eq(taskItems.needsApproval, true),
+        isNull(taskItems.isApproved)
+      ));
 
     const [completedTasksCount] = await db
       .select({ count: sql<number>`count(*)` })

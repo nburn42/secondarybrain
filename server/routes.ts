@@ -241,38 +241,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Approval Queue
+  // Approvals (from task items)
   app.get("/api/approvals", async (req, res) => {
     try {
-      const approvals = await storage.getApprovalQueue();
+      const approvals = await storage.getPendingApprovals();
       res.json(approvals);
     } catch (error) {
-      res.status(500).json({ message: "Failed to fetch approval queue" });
+      res.status(500).json({ message: "Failed to fetch pending approvals" });
     }
   });
 
-  app.post("/api/approvals/:id/process", async (req, res) => {
+  app.post("/api/task-items/:id/approve", async (req, res) => {
     try {
-      const { isApproved, notes, reviewedBy } = req.body;
-      await storage.processApproval(req.params.id, isApproved, notes, reviewedBy);
-      res.json({ message: "Approval processed successfully" });
+      const { isApproved, rejectionReason } = req.body;
+      await storage.processTaskItemApproval(req.params.id, isApproved, rejectionReason);
+      res.json({ message: "Task item approval processed successfully" });
     } catch (error) {
-      res.status(500).json({ message: "Failed to process approval" });
-    }
-  });
-
-  // Submit task for approval
-  app.post("/api/tasks/:id/submit-for-approval", async (req, res) => {
-    try {
-      // Update task status to awaiting_approval
-      await storage.updateTask(req.params.id, { status: "awaiting_approval" });
-      
-      // Add to approval queue
-      await storage.createApprovalRequest({ taskId: req.params.id });
-      
-      res.json({ message: "Task submitted for approval" });
-    } catch (error) {
-      res.status(500).json({ message: "Failed to submit task for approval" });
+      res.status(500).json({ message: "Failed to process task item approval" });
     }
   });
 

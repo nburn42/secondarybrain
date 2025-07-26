@@ -77,16 +77,7 @@ export const taskItems = pgTable("task_items", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
-export const approvalQueue = pgTable("approval_queue", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  taskId: varchar("task_id").notNull().references(() => tasks.id, { onDelete: "cascade" }),
-  taskItemId: varchar("task_item_id").references(() => taskItems.id),
-  submittedAt: timestamp("submitted_at").defaultNow().notNull(),
-  reviewedAt: timestamp("reviewed_at"),
-  reviewedBy: text("reviewed_by"),
-  isApproved: boolean("is_approved"),
-  notes: text("notes"),
-});
+
 
 // Relations
 export const projectsRelations = relations(projects, ({ many }) => ({
@@ -107,7 +98,6 @@ export const tasksRelations = relations(tasks, ({ one, many }) => ({
     references: [projects.id],
   }),
   taskItems: many(taskItems),
-  approvalQueue: many(approvalQueue),
 }));
 
 export const taskItemsRelations = relations(taskItems, ({ one, many }) => ({
@@ -122,16 +112,7 @@ export const taskItemsRelations = relations(taskItems, ({ one, many }) => ({
   children: many(taskItems),
 }));
 
-export const approvalQueueRelations = relations(approvalQueue, ({ one }) => ({
-  task: one(tasks, {
-    fields: [approvalQueue.taskId],
-    references: [tasks.id],
-  }),
-  taskItem: one(taskItems, {
-    fields: [approvalQueue.taskItemId],
-    references: [taskItems.id],
-  }),
-}));
+
 
 // Insert schemas
 export const insertProjectSchema = createInsertSchema(projects).omit({
@@ -162,12 +143,6 @@ export const insertTaskItemSchema = createInsertSchema(taskItems).omit({
   updatedAt: true,
 });
 
-export const insertApprovalQueueSchema = createInsertSchema(approvalQueue).omit({
-  id: true,
-  submittedAt: true,
-  reviewedAt: true,
-});
-
 // Types
 export type InsertProject = z.infer<typeof insertProjectSchema>;
 export type Project = typeof projects.$inferSelect;
@@ -180,9 +155,6 @@ export type Task = typeof tasks.$inferSelect;
 
 export type InsertTaskItem = z.infer<typeof insertTaskItemSchema>;
 export type TaskItem = typeof taskItems.$inferSelect;
-
-export type InsertApprovalQueue = z.infer<typeof insertApprovalQueueSchema>;
-export type ApprovalQueue = typeof approvalQueue.$inferSelect;
 
 // Extended types with relations
 export type ProjectWithRelations = Project & {
@@ -200,9 +172,4 @@ export type TaskItemWithChildren = TaskItem & {
 
 export type TaskWithItems = Task & {
   taskItems: TaskItemWithChildren[];
-};
-
-export type ApprovalQueueWithTask = ApprovalQueue & {
-  task: TaskWithProject;
-  taskItem?: TaskItem;
 };
