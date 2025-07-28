@@ -227,7 +227,8 @@ Preferred communication style: Simple, everyday language.
   - **API Integration**: Seamless approval/rejection with automatic refresh and progress tracking
 
 - **Enhanced Repository Selection**: Improved project repository management with existing repo linking - January 2025
-  - **Dual Mode Dialog**: Toggle between selecting existing repositories and creating new ones
+  - **Smart Repository Dialog**: Select from existing repositories with automatic filtering
+  - **Navigation Integration**: "Go to Repositories" button links directly to repository management tab
   - **Repository Filtering**: Automatically filters out already-linked repositories from selection
   - **Visual Repository Cards**: Rich display with GitHub icons, names, and descriptions
   - **Seamless Linking**: One-click linking of existing repositories to projects
