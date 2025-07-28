@@ -515,23 +515,16 @@ export default function ProjectDetail() {
               <DialogTitle>Add Repository to Project</DialogTitle>
             </DialogHeader>
             
-            {/* Mode Selection */}
-            <div className="flex bg-gray-100 dark:bg-gray-800 rounded-lg p-1 mb-4">
-              <Button
-                type="button"
-                variant={repoSelectionMode === 'existing' ? "default" : "ghost"}
-                size="sm"
-                onClick={() => setRepoSelectionMode('existing')}
-                className="flex-1"
-              >
-                Select Existing
-              </Button>
+            {/* Actions */}
+            <div className="flex justify-between items-center mb-4">
+              <div className="text-sm text-gray-600 dark:text-gray-400">
+                Select a repository to link to this project
+              </div>
               <Link href="/repositories">
                 <Button
                   type="button"
-                  variant="ghost"
+                  variant="outline"
                   size="sm"
-                  className="flex-1"
                   onClick={() => setIsRepoDialogOpen(false)}
                 >
                   <ExternalLink className="w-4 h-4 mr-2" />
