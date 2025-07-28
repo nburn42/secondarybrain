@@ -252,6 +252,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Repository updates (linking to projects)
+  app.put("/api/repositories/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const updateData = req.body;
+
+      const updatedRepo = await storage.updateRepository(id, updateData);
+      
+      if (!updatedRepo) {
+        return res.status(404).json({ message: "Repository not found" });
+      }
+
+      res.json(updatedRepo);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to update repository" });
+    }
+  });
+
   // Repository authentication
   app.put("/api/repositories/:id/auth", async (req, res) => {
     try {

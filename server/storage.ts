@@ -381,6 +381,15 @@ export class DatabaseStorage implements IStorage {
     };
   }
 
+  async updateRepository(id: string, updates: Partial<InsertGithubRepository>): Promise<GithubRepository | undefined> {
+    const [repo] = await db
+      .update(githubRepositories)
+      .set(updates)
+      .where(eq(githubRepositories.id, id))
+      .returning();
+    return repo;
+  }
+
   async updateRepositoryAuth(id: string, githubToken: string, isPrivate: boolean): Promise<GithubRepository | undefined> {
     const [repo] = await db
       .update(githubRepositories)
