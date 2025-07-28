@@ -18,7 +18,7 @@ export default function PWAInstallPrompt() {
           <div className="flex items-center gap-2">
             <Smartphone className="h-5 w-5 text-blue-600 dark:text-blue-400" />
             <CardTitle className="text-sm font-semibold text-blue-900 dark:text-blue-100">
-              Install Secondary Brain
+              Install tandembrain
             </CardTitle>
           </div>
           <Button

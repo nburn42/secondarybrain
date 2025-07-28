@@ -1,6 +1,6 @@
 {
-  "name": "Secondary Brain - Project Management",
-  "short_name": "Secondary Brain",
+  "name": "tandembrain - Project Management",
+  "short_name": "tandembrain",
   "description": "Advanced project management platform with intelligent task execution and GitHub integration",
   "start_url": "/",
   "display": "standalone",

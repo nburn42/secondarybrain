@@ -1,4 +1,4 @@
-# Secondary Brain - Replit Guide
+# tandembrain - Replit Guide
 
 ## Overview
 
@@ -7,7 +7,7 @@ This is a full-stack project management system built with React, Express.js, and
 ## User Preferences
 
 Preferred communication style: Simple, everyday language.
-Application name: Secondary Brain (changed from Neural Notify - January 2025).
+Application name: tandembrain (changed from Neural Notify to Secondary Brain to tandembrain - January 2025).
 
 ## System Architecture
 
@@ -235,9 +235,9 @@ Application name: Secondary Brain (changed from Neural Notify - January 2025).
   - **Seamless Linking**: One-click linking of existing repositories to projects
   - **Project Integration**: Repositories can be shared across multiple projects or kept project-specific
 
-- **Application Rebranding**: Changed application name from Neural Notify to Secondary Brain - January 2025
+- **Application Rebranding**: Changed application name from Neural Notify to Secondary Brain to tandembrain - January 2025
   - **UI Updates**: Updated all frontend titles, headings, and PWA manifest
-  - **Agent System**: Renamed NeuralNotifyAgent class to SecondaryBrainAgent
+  - **Agent System**: Renamed NeuralNotifyAgent to SecondaryBrainAgent to TandembrainAgent class
   - **Build Scripts**: Updated container build and deployment scripts with new naming
   - **Service Worker**: Updated push notification branding and messages
   - **Documentation**: Updated README files and code comments throughout codebase

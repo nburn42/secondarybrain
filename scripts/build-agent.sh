@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Secondary Brain Agent Container Build Script
+# tandembrain Agent Container Build Script
 # Builds and pushes the agent Docker image to GCP Artifact Registry
 
 set -e
@@ -9,13 +9,13 @@ set -e
 PROJECT_ID="neuronotify"
 REGION="us-west2"
 REPOSITORY="neuronotifyagent"
-IMAGE_NAME="secondary-brain-agent"
+IMAGE_NAME="tandembrain-agent"
 TAG=${1:-latest}
 
 # Full image path
 IMAGE_PATH="${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}/${IMAGE_NAME}:${TAG}"
 
-echo "🚀 Building Secondary Brain Agent Container"
+echo "🚀 Building tandembrain Agent Container"
 echo "Project: ${PROJECT_ID}"
 echo "Region: ${REGION}"
 echo "Repository: ${REPOSITORY}"

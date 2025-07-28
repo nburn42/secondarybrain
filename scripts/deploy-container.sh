@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Secondary Brain Container Deployment Script
+# tandembrain Container Deployment Script
 # Creates and runs agent containers in GKE
 
 set -e
@@ -9,8 +9,8 @@ set -e
 PROJECT_ID="neuronotify"
 REGION="us-west2"
 REPOSITORY="neuronotifyagent"
-IMAGE_NAME="secondary-brain-agent"
-CLUSTER_NAME="secondary-brain-cluster"
+IMAGE_NAME="tandembrain-agent"
+CLUSTER_NAME="tandembrain-cluster"
 ZONE="us-west2-a"
 
 # Function to create container

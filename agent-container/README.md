@@ -1,6 +1,6 @@
-# Secondary Brain Agent Container
+# tandembrain Agent Container
 
-This Docker container provides the execution environment for Secondary Brain task agents. It includes a complete workspace setup with repository cloning and JWT-based authentication.
+This Docker container provides the execution environment for tandembrain task agents. It includes a complete workspace setup with repository cloning and JWT-based authentication.
 
 ## Features
 
@@ -26,7 +26,7 @@ curl -X POST http://localhost:5000/api/projects/YOUR_PROJECT_ID/agent-token \
 
 ### 3. Run the Agent
 ```bash
-docker run -e JWT_TOKEN=your-jwt-token secondary-brain-agent
+docker run -e JWT_TOKEN=your-jwt-token tandembrain-agent
 ```
 
 Or using docker-compose:
