@@ -61,7 +61,7 @@ def test_agent_api(token):
         print(f"✗ Error: {e}")
 
 if __name__ == "__main__":
-    print("Testing Neural Notify Agent Integration")
+    print("Testing Secondary Brain Agent Integration")
     print("=" * 40)
     
     token = test_token_generation()

@@ -1,6 +1,6 @@
 {
-  "name": "Neural Notify - Project Management",
-  "short_name": "Neural Notify",
+  "name": "Secondary Brain - Project Management",
+  "short_name": "Secondary Brain",
   "description": "Advanced project management platform with intelligent task execution and GitHub integration",
   "start_url": "/",
   "display": "standalone",

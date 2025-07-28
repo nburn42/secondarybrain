@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Neural Notify Agent - Task Execution Container with Planner Loop
+Secondary Brain Agent - Task Execution Container with Planner Loop
 """
 
 import os
@@ -18,7 +18,7 @@ PROJECT_ID = os.getenv('PROJECT_ID')
 CONTAINER_ID = os.getenv('CONTAINER_ID')
 WORKSPACE_DIR = '/workspace'
 
-class NeuralNotifyAgent:
+class SecondaryBrainAgent:
     def __init__(self):
         self.jwt_token = self.get_jwt_token()
         self.headers = {
@@ -295,5 +295,5 @@ The task has been processed and is ready for more sophisticated planning integra
                 time.sleep(60)  # Wait before retrying
 
 if __name__ == "__main__":
-    agent = NeuralNotifyAgent()
+    agent = SecondaryBrainAgent()
     agent.run()

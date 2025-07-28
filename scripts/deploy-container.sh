@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Neural Notify Container Deployment Script
+# Secondary Brain Container Deployment Script
 # Creates and runs agent containers in GKE
 
 set -e
@@ -9,8 +9,8 @@ set -e
 PROJECT_ID="neuronotify"
 REGION="us-west2"
 REPOSITORY="neuronotifyagent"
-IMAGE_NAME="neural-notify-agent"
-CLUSTER_NAME="neural-notify-cluster"
+IMAGE_NAME="secondary-brain-agent"
+CLUSTER_NAME="secondary-brain-cluster"
 ZONE="us-west2-a"
 
 # Function to create container

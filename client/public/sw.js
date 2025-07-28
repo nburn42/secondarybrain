@@ -167,7 +167,7 @@ self.addEventListener('push', (event) => {
   console.log('[SW] Push received:', event);
   
   const options = {
-    body: 'You have new updates in Neural Notify',
+    body: 'You have new updates in Secondary Brain',
     icon: '/pwa-icon-192.png',
     badge: '/pwa-icon-192.png',
     vibrate: [100, 50, 100],
@@ -195,7 +195,7 @@ self.addEventListener('push', (event) => {
   }
   
   event.waitUntil(
-    self.registration.showNotification('Neural Notify', options)
+    self.registration.showNotification('Secondary Brain', options)
   );
 });
 
