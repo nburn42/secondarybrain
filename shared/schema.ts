@@ -116,8 +116,11 @@ export const taskItemsRelations = relations(taskItems, ({ one, many }) => ({
   parent: one(taskItems, {
     fields: [taskItems.parentId],
     references: [taskItems.id],
+    relationName: "parentTaskItem",
   }),
-  children: many(taskItems),
+  children: many(taskItems, {
+    relationName: "parentTaskItem",
+  }),
 }));
 
 

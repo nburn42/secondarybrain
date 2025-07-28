@@ -1,7 +1,8 @@
 import { Task, TaskWithProject } from "@shared/schema";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Edit2, Trash2 } from "lucide-react";
+import { Edit2, Trash2, ExternalLink } from "lucide-react";
+import { Link } from "wouter";
 
 interface TaskCardProps {
   task: Task | TaskWithProject;
@@ -38,31 +39,36 @@ export default function TaskCard({ task, showProject = false, onEdit, onDelete }
   };
 
   return (
-    <div className="border border-gray-200 rounded-lg p-4 hover:border-gray-300 transition-colors">
+    <div className="border border-gray-200 rounded-lg p-4 hover:border-gray-300 transition-colors group">
       <div className="flex items-center justify-between">
-        <div className="flex-1">
-          <div className="flex items-center mb-2">
-            <h5 className="font-medium text-gray-900">{task.title}</h5>
-            <Badge className={`ml-2 ${getStatusColor(task.status)}`}>
-              {task.status.replace('_', ' ')}
-            </Badge>
-          </div>
-          {task.description && (
-            <p className="text-sm text-gray-600 mb-2">{task.description}</p>
-          )}
-          <div className="flex items-center text-xs text-gray-500 space-x-4">
-            <span className={getPriorityColor(task.priority)}>
-              Priority: {task.priority.toFixed(1)}
-            </span>
-            {task.estimatedHours && (
-              <span>Estimate: {task.estimatedHours} hours</span>
+        <Link href={`/tasks/${task.id}`} className="flex-1">
+          <div className="cursor-pointer">
+            <div className="flex items-center mb-2">
+              <h5 className="font-medium text-gray-900 group-hover:text-blue-600 transition-colors">
+                {task.title}
+              </h5>
+              <Badge className={`ml-2 ${getStatusColor(task.status)}`}>
+                {task.status.replace('_', ' ')}
+              </Badge>
+              <ExternalLink className="w-4 h-4 ml-2 text-gray-400 group-hover:text-blue-600 transition-colors" />
+            </div>
+            {task.description && (
+              <p className="text-sm text-gray-600 mb-2">{task.description}</p>
             )}
-            <span>Author: {task.authorName}</span>
-            {showProject && 'project' in task && (
-              <span>Project: {task.project.name}</span>
-            )}
+            <div className="flex items-center text-xs text-gray-500 space-x-4">
+              <span className={getPriorityColor(task.priority)}>
+                Priority: {task.priority.toFixed(1)}
+              </span>
+              {task.estimatedHours && (
+                <span>Estimate: {task.estimatedHours} hours</span>
+              )}
+              <span>Author: {task.authorName}</span>
+              {showProject && 'project' in task && (
+                <span>Project: {task.project.name}</span>
+              )}
+            </div>
           </div>
-        </div>
+        </Link>
         {(onEdit || onDelete) && (
           <div className="flex items-center space-x-2 ml-4">
             {onEdit && (

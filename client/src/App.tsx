@@ -10,6 +10,7 @@ import ProjectDetail from "@/pages/project-detail";
 import Repositories from "@/pages/repositories";
 import Approvals from "@/pages/approvals";
 import Tasks from "@/pages/tasks";
+import TaskDetail from "@/pages/task-detail";
 import Sidebar from "@/components/layout/sidebar";
 import PWAInstallPrompt from "@/components/pwa-install-prompt";
 
@@ -25,6 +26,7 @@ function Router() {
           <Route path="/repositories" component={Repositories} />
           <Route path="/approvals" component={Approvals} />
           <Route path="/tasks" component={Tasks} />
+          <Route path="/tasks/:id" component={TaskDetail} />
           <Route component={NotFound} />
         </Switch>
       </div>

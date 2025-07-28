@@ -342,6 +342,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const taskItems = await storage.getTaskItems(req.params.taskId);
       res.json(taskItems);
     } catch (error) {
+      console.error("Error fetching task items:", error);
       res.status(500).json({ message: "Failed to fetch task items" });
     }
   });
