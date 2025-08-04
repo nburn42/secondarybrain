@@ -1,0 +1,16 @@
+# Docker Compose Override Example
+# Copy this to docker-compose.override.yml and update with your values
+# The override file is ignored by git and will be automatically used by docker-compose
+
+version: '3.8'
+
+services:
+  app:
+    environment:
+      # Override JWT secret for local development
+      JWT_SECRET: ${JWT_SECRET:-local-dev-secret-change-in-production}
+      
+  agent:
+    environment:
+      # Add your Anthropic API key here
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}

@@ -19,7 +19,7 @@
 - **Status**: RUNNABLE (Created on 2025-08-04)
 - **Database Name**: `tandembrain`
 - **Application User**: `tandembrain_app`
-- **Application Password**: `O8gaByG2cHVQSrwuxEseVDoDH`
+- **Application Password**: `[STORED IN SECRET MANAGER]`
 
 ### Google Kubernetes Engine (GKE)
 - **Cluster Name**: `tandembrain-cluster`
@@ -37,25 +37,31 @@
 ```bash
 # Connect via gcloud as admin
 gcloud sql connect tandembrain-db --user=postgres --project=neuronotify
-# Password: TempPassword123!
+# Password: [STORED IN SECRET MANAGER]
 
 # Connection string for public IP (development only)
-postgresql://tandembrain_app:O8gaByG2cHVQSrwuxEseVDoDH@34.102.18.89:5432/tandembrain
+postgresql://tandembrain_app:[DB_APP_PASSWORD]@34.102.18.89:5432/tandembrain
 ```
 
 ### Application Connection (from GKE)
 For secure connection from GKE, use Cloud SQL Proxy:
 ```bash
 # Connection string via proxy (recommended for production)
-postgresql://tandembrain_app:O8gaByG2cHVQSrwuxEseVDoDH@127.0.0.1:5432/tandembrain
+postgresql://tandembrain_app:[DB_APP_PASSWORD]@127.0.0.1:5432/tandembrain
 ```
 
 ## Environment Variables
 
+### Secret Management
+All secrets are stored in Google Cloud Secret Manager. Use the following scripts:
+- `./scripts/fetch-secrets.sh` - Retrieve secrets and create local .env file
+- `./scripts/update-secrets.sh` - Update secrets in Cloud Secret Manager
+- See `docs/SECRET-MANAGEMENT.md` for detailed instructions
+
 ### Production Environment
 ```env
 # Database (via Cloud SQL Proxy)
-DATABASE_URL=postgresql://tandembrain_app:O8gaByG2cHVQSrwuxEseVDoDH@127.0.0.1:5432/tandembrain
+DATABASE_URL=postgresql://tandembrain_app:[DB_APP_PASSWORD]@127.0.0.1:5432/tandembrain
 
 # Google Cloud
 GOOGLE_CLOUD_PROJECT=neuronotify
@@ -64,7 +70,7 @@ GOOGLE_APPLICATION_CREDENTIALS=/app/credentials/service-account.json
 # Application
 NODE_ENV=production
 PORT=3000
-JWT_SECRET=<generate-secure-secret>
+JWT_SECRET=[STORED IN SECRET MANAGER]
 ```
 
 ## Current Deployment Status
@@ -99,15 +105,15 @@ gcloud config set project neuronotify
 
 # Connect to database as admin
 gcloud sql connect tandembrain-db --user=postgres
-# Password: TempPassword123!
+# Password: [STORED IN SECRET MANAGER]
 
 # Connect via psql directly (development)
-PGPASSWORD='O8gaByG2cHVQSrwuxEseVDoDH' psql -h 34.102.18.89 -U tandembrain_app -d tandembrain
+PGPASSWORD='[DB_APP_PASSWORD]' psql -h 34.102.18.89 -U tandembrain_app -d tandembrain
 
 # Create Kubernetes secret
 kubectl create secret generic tandembrain-secrets \
-  --from-literal=DATABASE_URL='postgresql://tandembrain_app:O8gaByG2cHVQSrwuxEseVDoDH@127.0.0.1:5432/tandembrain' \
-  --from-literal=JWT_SECRET='k7Hv1sAeKFgVW2NNzFrm+Z2X7okAnY+A/S9ulhOWOl0=' \
+  --from-literal=DATABASE_URL='postgresql://tandembrain_app:[DB_APP_PASSWORD]@127.0.0.1:5432/tandembrain' \
+  --from-literal=JWT_SECRET='[FETCH FROM SECRET MANAGER]' \
   -n tandembrain
 ```
 
