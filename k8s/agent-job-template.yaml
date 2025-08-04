@@ -1,0 +1,51 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  generateName: tandembrain-agent-
+  namespace: tandembrain
+  labels:
+    app: tandembrain
+    component: agent
+spec:
+  ttlSecondsAfterFinished: 300
+  backoffLimit: 3
+  template:
+    metadata:
+      labels:
+        app: tandembrain
+        component: agent
+    spec:
+      serviceAccountName: tandembrain-agent
+      restartPolicy: Never
+      containers:
+      - name: agent
+        image: us-west2-docker.pkg.dev/neuronotify/neuronotifyagent/tandembrain-agent:latest
+        imagePullPolicy: Always
+        env:
+        - name: JWT_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: agent-secrets
+              key: jwt-token
+        - name: API_BASE_URL
+          value: "http://tandembrain-app.tandembrain.svc.cluster.local"
+        - name: PROJECT_ID
+          value: "$(PROJECT_ID)"
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+        securityContext:
+          runAsNonRoot: true
+          runAsUser: 1000
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+        volumeMounts:
+        - name: workspace
+          mountPath: /workspace
+      volumes:
+      - name: workspace
+        emptyDir: {}

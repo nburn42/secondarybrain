@@ -1,0 +1,91 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tandembrain-app
+  namespace: tandembrain
+  labels:
+    app: tandembrain
+    component: app
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: tandembrain
+      component: app
+  template:
+    metadata:
+      labels:
+        app: tandembrain
+        component: app
+    spec:
+      serviceAccountName: tandembrain-app
+      containers:
+      # Main application container
+      - name: tandembrain-app
+        image: us-west2-docker.pkg.dev/neuronotify/tandembrain/tandembrain-app:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 3000
+          name: http
+        env:
+        - name: NODE_ENV
+          valueFrom:
+            configMapKeyRef:
+              name: tandembrain-config
+              key: NODE_ENV
+        - name: PORT
+          valueFrom:
+            configMapKeyRef:
+              name: tandembrain-config
+              key: PORT
+        - name: GOOGLE_CLOUD_PROJECT
+          valueFrom:
+            configMapKeyRef:
+              name: tandembrain-config
+              key: GOOGLE_CLOUD_PROJECT
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: tandembrain-secrets
+              key: DATABASE_URL
+        - name: JWT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: tandembrain-secrets
+              key: JWT_SECRET
+        resources:
+          requests:
+            cpu: 100m
+            memory: 256Mi
+          limits:
+            cpu: 500m
+            memory: 512Mi
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: http
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: http
+          initialDelaySeconds: 10
+          periodSeconds: 5
+      
+      # Cloud SQL Proxy sidecar
+      - name: cloud-sql-proxy
+        image: gcr.io/cloud-sql-connectors/cloud-sql-proxy:2.11.4
+        args:
+          - "--port=5432"
+          - "--structured-logs"
+          - "neuronotify:us-west2:tandembrain-db"
+        securityContext:
+          runAsNonRoot: true
+        resources:
+          requests:
+            cpu: 50m
+            memory: 64Mi
+          limits:
+            cpu: 100m
+            memory: 128Mi

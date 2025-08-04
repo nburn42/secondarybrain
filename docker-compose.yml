@@ -1,0 +1,82 @@
+version: '3.8'
+
+services:
+  # PostgreSQL database for local development
+  postgres:
+    image: postgres:15-alpine
+    container_name: tandembrain-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: localdev123
+      POSTGRES_DB: tandembrain
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Main application
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    container_name: tandembrain-app
+    environment:
+      NODE_ENV: development
+      DATABASE_URL: postgresql://postgres:localdev123@postgres:5432/tandembrain
+      JWT_SECRET: local-dev-secret-change-in-production
+      PORT: 3000
+    ports:
+      - "3000:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      # For development, mount source code
+      - ./server:/app/server:ro
+      - ./shared:/app/shared:ro
+      - ./client/dist:/app/client/dist:ro
+    command: ["node", "--watch", "server/dist/index.js"]
+
+  # Agent container
+  agent:
+    build:
+      context: ./agent-container
+      dockerfile: Dockerfile
+    container_name: tandembrain-agent
+    environment:
+      PYTHONUNBUFFERED: 1
+      API_URL: http://app:3000
+    depends_on:
+      - app
+    volumes:
+      - ./agent-container:/app:ro
+      - agent_workspace:/workspace
+
+  # Development helper - watches and rebuilds
+  dev-builder:
+    image: node:20-alpine
+    container_name: tandembrain-dev-builder
+    working_dir: /app
+    volumes:
+      - .:/app
+    command: |
+      sh -c "
+        npm install &&
+        npm run dev:build-watch
+      "
+    profiles:
+      - dev
+
+volumes:
+  postgres_data:
+  agent_workspace:
+
+networks:
+  default:
+    name: tandembrain-network

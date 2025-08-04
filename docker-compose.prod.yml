@@ -1,0 +1,55 @@
+version: '3.8'
+
+# Production-like docker-compose for testing
+# This uses Cloud SQL proxy to connect to the production database
+
+services:
+  # Cloud SQL Proxy
+  cloud-sql-proxy:
+    image: gcr.io/cloud-sql-connectors/cloud-sql-proxy:2.11.4
+    container_name: tandembrain-sql-proxy
+    command:
+      - "/cloud-sql-proxy"
+      - "--structured-logs"
+      - "--port=5432"
+      - "neuronotify:us-west2:tandembrain-db"
+    volumes:
+      - ~/.config/gcloud:/config
+    environment:
+      GOOGLE_APPLICATION_CREDENTIALS: /config/application_default_credentials.json
+    ports:
+      - "5432:5432"
+
+  # Main application
+  app:
+    image: us-west2-docker.pkg.dev/neuronotify/tandembrain/tandembrain-app:latest
+    container_name: tandembrain-app
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://tandembrain_app:${DB_PASSWORD}@cloud-sql-proxy:5432/tandembrain
+      JWT_SECRET: ${JWT_SECRET}
+      PORT: 3000
+      GOOGLE_CLOUD_PROJECT: neuronotify
+    ports:
+      - "3000:3000"
+    depends_on:
+      - cloud-sql-proxy
+
+  # Agent container
+  agent:
+    image: us-west2-docker.pkg.dev/neuronotify/neuronotifyagent/agent:latest
+    container_name: tandembrain-agent
+    environment:
+      PYTHONUNBUFFERED: 1
+      API_URL: http://app:3000
+    depends_on:
+      - app
+    volumes:
+      - agent_workspace:/workspace
+
+volumes:
+  agent_workspace:
+
+networks:
+  default:
+    name: tandembrain-prod-network

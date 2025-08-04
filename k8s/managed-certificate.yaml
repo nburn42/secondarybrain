@@ -1,0 +1,8 @@
+apiVersion: networking.gke.io/v1
+kind: ManagedCertificate
+metadata:
+  name: tandembrain-cert
+  namespace: tandembrain
+spec:
+  domains:
+    - tandembrain.app  # Replace with your domain
