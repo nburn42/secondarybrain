@@ -12,7 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { insertTaskSchema, insertGithubRepositorySchema } from "@shared/schema";
+import { insertTaskSchema, insertGithubRepositorySchema, insertContainerSchema } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -24,7 +24,10 @@ import {
   Users,
   GitBranch,
   Settings,
-  Trash2
+  Trash2,
+  Container,
+  Play,
+  StopCircle
 } from "lucide-react";
 import { Link } from "wouter";
 
@@ -80,6 +83,16 @@ export default function ProjectDetail() {
     defaultValues: {
       url: "",
       description: "",
+      projectId: projectId || "",
+    },
+  });
+
+  const containerForm = useForm({
+    resolver: zodResolver(insertContainerSchema),
+    defaultValues: {
+      name: "",
+      imageTag: "latest",
+      status: "pending",
       projectId: projectId || "",
     },
   });
@@ -174,12 +187,38 @@ export default function ProjectDetail() {
     },
   });
 
+  const createContainerMutation = useMutation({
+    mutationFn: async (data: any) => {
+      return await apiRequest("POST", `/api/projects/${projectId}/containers`, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/projects", projectId, "containers"] });
+      setIsContainerDialogOpen(false);
+      containerForm.reset();
+      toast({
+        title: "Success",
+        description: "Container created successfully",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to create container",
+        variant: "destructive",
+      });
+    },
+  });
+
   const onTaskSubmit = (data: any) => {
     createTaskMutation.mutate(data);
   };
 
   const onRepoSubmit = (data: any) => {
     createRepoMutation.mutate(data);
+  };
+
+  const onContainerSubmit = (data: any) => {
+    createContainerMutation.mutate(data);
   };
 
   if (isLoading) {
@@ -275,9 +314,10 @@ export default function ProjectDetail() {
       </div>
 
       <main className="flex-1 px-6 py-6">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Repositories */}
-          <div className="lg:col-span-1">
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+          {/* Left Column - Repositories and Containers */}
+          <div className="xl:col-span-1 space-y-6">
+            {/* Repositories */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-100">
               <div className="p-6">
                 <div className="flex items-center justify-between mb-4">
@@ -327,10 +367,70 @@ export default function ProjectDetail() {
                 </div>
               </div>
             </div>
+
+            {/* Containers */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100">
+              <div className="p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold text-gray-900">Containers</h3>
+                  <Button 
+                    size="sm" 
+                    variant="outline"
+                    onClick={() => setIsContainerDialogOpen(true)}
+                  >
+                    <Plus className="w-4 h-4" />
+                  </Button>
+                </div>
+                
+                <div className="space-y-3">
+                  {containers?.map((container: any) => (
+                    <div key={container.id} className="border border-gray-200 rounded-lg p-4 hover:border-primary transition-colors">
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center">
+                          <Container className="w-5 h-5 text-gray-700 mr-2" />
+                          <span className="font-medium text-gray-900">{container.name}</span>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          {container.status === 'running' ? (
+                            <span className="flex items-center text-sm text-green-600">
+                              <Play className="w-4 h-4 mr-1" />
+                              Running
+                            </span>
+                          ) : (
+                            <span className="flex items-center text-sm text-gray-500">
+                              <StopCircle className="w-4 h-4 mr-1" />
+                              Stopped
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      {container.taskId && (
+                        <div className="text-xs text-gray-500">
+                          <span>Task: {container.taskId}</span>
+                        </div>
+                      )}
+                      {container.createdAt && (
+                        <div className="text-xs text-gray-500 mt-1">
+                          <span>Created: {new Date(container.createdAt).toLocaleDateString()}</span>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                  
+                  {(!containers || containers.length === 0) && (
+                    <div className="text-center py-8 text-gray-500">
+                      <Container className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+                      <p className="text-sm">No containers running</p>
+                      <p className="text-xs mt-1">Containers will appear when tasks are executed</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
           </div>
 
           {/* Tasks */}
-          <div className="lg:col-span-2">
+          <div className="xl:col-span-2">
             <div className="bg-white rounded-xl shadow-sm border border-gray-100">
               <div className="p-6">
                 <div className="flex items-center justify-between mb-4">
@@ -600,6 +700,106 @@ export default function ProjectDetail() {
                 </Button>
               </div>
             </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Create Container Dialog */}
+        <Dialog open={isContainerDialogOpen} onOpenChange={setIsContainerDialogOpen}>
+          <DialogContent className="sm:max-w-[525px]">
+            <DialogHeader>
+              <DialogTitle>Create New Container</DialogTitle>
+            </DialogHeader>
+            <Form {...containerForm}>
+              <form onSubmit={containerForm.handleSubmit(onContainerSubmit)} className="space-y-4">
+                <FormField
+                  control={containerForm.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Container Name</FormLabel>
+                      <FormControl>
+                        <Input placeholder="my-container" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={containerForm.control}
+                  name="imageTag"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Image Tag</FormLabel>
+                      <FormControl>
+                        <Input placeholder="latest" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={containerForm.control}
+                  name="taskId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Task (Optional)</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select a task to associate" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="">None</SelectItem>
+                          {tasks?.map((task) => (
+                            <SelectItem key={task.id} value={task.id}>
+                              {task.title}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={containerForm.control}
+                  name="logs"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Initial Logs (Optional)</FormLabel>
+                      <FormControl>
+                        <Textarea 
+                          placeholder="Container initialization logs..."
+                          rows={3}
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <div className="flex justify-end space-x-2 pt-4">
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    onClick={() => setIsContainerDialogOpen(false)}
+                  >
+                    Cancel
+                  </Button>
+                  <Button 
+                    type="submit" 
+                    disabled={createContainerMutation.isPending}
+                  >
+                    {createContainerMutation.isPending ? "Creating..." : "Create Container"}
+                  </Button>
+                </div>
+              </form>
+            </Form>
           </DialogContent>
         </Dialog>
       </main>
