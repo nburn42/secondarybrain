@@ -7,10 +7,10 @@ metadata:
     kubernetes.io/ingress.global-static-ip-name: tandembrain-ip
     networking.gke.io/managed-certificates: tandembrain-cert
     kubernetes.io/ingress.class: "gce"
-    kubernetes.io/ingress.allow-http: "false"
+    kubernetes.io/ingress.allow-http: "true"
 spec:
   rules:
-  - host: tandembrain.app  # Replace with your domain
+  - host: tandembrain.com
     http:
       paths:
       - path: /*

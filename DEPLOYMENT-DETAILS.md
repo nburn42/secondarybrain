@@ -24,7 +24,8 @@
 ### Google Kubernetes Engine (GKE)
 - **Cluster Name**: `tandembrain-cluster`
 - **Zone**: `us-west2-a`
-- **Node Pool**: Default configuration
+- **Node Pool**: `standard-pool` with e2-small instances (upgraded from e2-micro due to memory constraints)
+- **Node IP**: `35.236.31.255` (authorized for Cloud SQL access)
 
 ### Google Artifact Registry
 - **Repository URL**: `us-west2-docker.pkg.dev/neuronotify/neuronotifyagent`
@@ -173,3 +174,69 @@ kubectl get pods -n default
    - Create Kubernetes manifests
    - Configure ingress and SSL
    - Deploy application
+
+## Deployment Lessons Learned & Critical Information
+
+### 1. Vite Import Issue Fix
+The application failed in production with "Cannot find package 'vite'" error:
+- **Problem**: `server/index.ts` imports from `./vite` but vite is a dev dependency
+- **Solution**: Created `server/index.prod.ts` without vite imports
+- **Files Changed**:
+  - Created: `server/index.prod.ts`
+  - Modified: `package.json` build script to use `esbuild server/index.prod.ts`
+  - Modified: `Dockerfile` CMD to run `dist/index.prod.js`
+
+### 2. Memory Constraints Resolution
+Pods failed to schedule with "Insufficient memory" on e2-micro instances:
+- **Problem**: e2-micro only has ~640MB available memory
+- **Solution**: Upgraded to e2-small instances (2GB RAM)
+- **Commands Used**:
+  ```bash
+  gcloud container clusters resize tandembrain-cluster --node-pool default-pool --num-nodes 0 --quiet
+  gcloud container node-pools create standard-pool \
+    --cluster=tandembrain-cluster \
+    --zone=us-west2-a \
+    --machine-type=e2-small \
+    --num-nodes=1
+  ```
+
+### 3. Cloud SQL Authorized Networks
+Database connection failed from GKE:
+- **Problem**: GKE node IP not authorized for Cloud SQL
+- **Solution**: Added node external IP to authorized networks
+- **Command**: 
+  ```bash
+  gcloud sql instances patch tandembrain-db \
+    --authorized-networks=35.236.31.255/32 \
+    --project=neuronotify
+  ```
+- **Note**: This uses public IP; Cloud SQL proxy is recommended for production
+
+### 4. Simplified Deployment Without Proxy
+Created alternative deployment due to resource constraints:
+- **File**: `k8s/app-deployment-simple.yaml`
+- **Changes**: Removed Cloud SQL proxy sidecar, uses direct DB connection
+- **Database URL**: Uses public IP directly in environment variable
+
+### 5. Actual Deployment Commands
+The exact commands used for successful deployment:
+```bash
+# Build and push image
+./scripts/build-app.sh
+
+# Create namespace and secrets
+kubectl apply -f k8s/namespace.yaml
+kubectl create secret generic tandembrain-secrets \
+  --from-literal=DATABASE_URL='[YOUR_DATABASE_URL]' \
+  --from-literal=JWT_SECRET='[YOUR_JWT_SECRET]' \
+  --from-literal=ANTHROPIC_API_KEY='[YOUR_ANTHROPIC_API_KEY]' \
+  -n tandembrain
+
+# Deploy application
+kubectl apply -f k8s/configmap.yaml
+kubectl apply -f k8s/service-account.yaml
+kubectl apply -f k8s/app-deployment-simple.yaml
+kubectl apply -f k8s/app-service.yaml
+kubectl apply -f k8s/managed-certificate.yaml
+kubectl apply -f k8s/ingress.yaml
+```

@@ -5,4 +5,4 @@ metadata:
   namespace: tandembrain
 spec:
   domains:
-    - tandembrain.app  # Replace with your domain
+    - tandembrain.com
