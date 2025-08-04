@@ -3,11 +3,12 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertProjectSchema, insertTaskSchema, insertGithubRepositorySchema, insertGlobalRepositorySchema, insertTaskItemSchema, insertContainerSchema } from "@shared/schema";
 import { generateAgentToken, verifyAgentToken, extractTokenFromRequest } from "./auth";
+import { requireAuth, AuthRequest } from "./middleware/auth";
 import { z } from "zod";
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Dashboard stats
-  app.get("/api/dashboard/stats", async (req, res) => {
+  // Dashboard stats (requires auth)
+  app.get("/api/dashboard/stats", requireAuth, async (req: AuthRequest, res) => {
     try {
       const stats = await storage.getDashboardStats();
       res.json(stats);
@@ -16,19 +17,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Projects
-  app.get("/api/projects", async (req, res) => {
+  // Projects (requires auth - returns only user's projects)
+  app.get("/api/projects", requireAuth, async (req: AuthRequest, res) => {
     try {
-      const projects = await storage.getProjects();
+      const projects = await storage.getProjects(req.userId!);
       res.json(projects);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch projects" });
     }
   });
 
-  app.get("/api/projects/:id", async (req, res) => {
+  app.get("/api/projects/:id", requireAuth, async (req: AuthRequest, res) => {
     try {
-      const project = await storage.getProject(req.params.id);
+      const project = await storage.getProject(req.params.id, req.userId!);
       if (!project) {
         return res.status(404).json({ message: "Project not found" });
       }
@@ -38,10 +39,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/projects", async (req, res) => {
+  app.post("/api/projects", requireAuth, async (req: AuthRequest, res) => {
     try {
       const projectData = insertProjectSchema.parse(req.body);
-      const project = await storage.createProject(projectData);
+      const project = await storage.createProject({
+        ...projectData,
+        userId: req.userId!,
+      });
       res.status(201).json(project);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -51,10 +55,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/projects/:id", async (req, res) => {
+  app.patch("/api/projects/:id", requireAuth, async (req: AuthRequest, res) => {
     try {
       const projectData = insertProjectSchema.partial().parse(req.body);
-      const project = await storage.updateProject(req.params.id, projectData);
+      const project = await storage.updateProject(req.params.id, req.userId!, projectData);
       res.json(project);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -64,9 +68,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/projects/:id", async (req, res) => {
+  app.delete("/api/projects/:id", requireAuth, async (req: AuthRequest, res) => {
     try {
-      await storage.deleteProject(req.params.id);
+      await storage.deleteProject(req.params.id, req.userId!);
       res.status(204).send();
     } catch (error) {
       res.status(500).json({ message: "Failed to delete project" });

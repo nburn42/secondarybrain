@@ -8,3 +8,5 @@ vite.config.ts.*
 .env.*
 !.env.example
 docker-compose.override.yml
+server/firebase-service-account.json
+*-service-account.json

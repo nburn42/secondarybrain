@@ -42,6 +42,11 @@ spec:
             configMapKeyRef:
               name: tandembrain-config
               key: GOOGLE_CLOUD_PROJECT
+        - name: FIREBASE_PROJECT_ID
+          valueFrom:
+            configMapKeyRef:
+              name: tandembrain-config
+              key: FIREBASE_PROJECT_ID
         - name: DATABASE_URL
           valueFrom:
             secretKeyRef:

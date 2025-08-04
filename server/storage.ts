@@ -4,6 +4,7 @@ import {
   tasks, 
   taskItems,
   containers,
+  users,
   type Project, 
   type InsertProject,
   type GithubRepository,
@@ -20,18 +21,25 @@ import {
   type TaskWithChildren,
   type TaskWithItems,
   type TaskItemWithChildren,
-  type TaskWithProjectAndChildren
+  type TaskWithProjectAndChildren,
+  type User,
+  type InsertUser
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, isNull, sql } from "drizzle-orm";
 
 export interface IStorage {
+  // Users
+  getUser(id: string): Promise<User | undefined>;
+  createUser(user: InsertUser): Promise<User>;
+  updateUserLastLogin(id: string): Promise<void>;
+
   // Projects
-  getProjects(): Promise<ProjectWithRelations[]>;
-  getProject(id: string): Promise<ProjectWithRelations | undefined>;
+  getProjects(userId: string): Promise<ProjectWithRelations[]>;
+  getProject(id: string, userId: string): Promise<ProjectWithRelations | undefined>;
   createProject(project: InsertProject): Promise<Project>;
-  updateProject(id: string, project: Partial<InsertProject>): Promise<Project>;
-  deleteProject(id: string): Promise<void>;
+  updateProject(id: string, userId: string, project: Partial<InsertProject>): Promise<Project>;
+  deleteProject(id: string, userId: string): Promise<void>;
 
   // GitHub Repositories
   getAllRepositories(): Promise<GithubRepository[]>;
@@ -80,8 +88,27 @@ export interface IStorage {
 }
 
 export class DatabaseStorage implements IStorage {
-  async getProjects(): Promise<ProjectWithRelations[]> {
+  // User methods
+  async getUser(id: string): Promise<User | undefined> {
+    return await db.query.users.findFirst({
+      where: eq(users.id, id),
+    });
+  }
+
+  async createUser(user: InsertUser): Promise<User> {
+    const [newUser] = await db.insert(users).values(user).returning();
+    return newUser;
+  }
+
+  async updateUserLastLogin(id: string): Promise<void> {
+    await db.update(users)
+      .set({ lastLoginAt: new Date() })
+      .where(eq(users.id, id));
+  }
+
+  async getProjects(userId: string): Promise<ProjectWithRelations[]> {
     return await db.query.projects.findMany({
+      where: eq(projects.userId, userId),
       with: {
         repositories: true,
         tasks: true,
@@ -90,9 +117,9 @@ export class DatabaseStorage implements IStorage {
     });
   }
 
-  async getProject(id: string): Promise<ProjectWithRelations | undefined> {
+  async getProject(id: string, userId: string): Promise<ProjectWithRelations | undefined> {
     return await db.query.projects.findFirst({
-      where: eq(projects.id, id),
+      where: and(eq(projects.id, id), eq(projects.userId, userId)),
       with: {
         repositories: true,
         tasks: true,
@@ -111,20 +138,20 @@ export class DatabaseStorage implements IStorage {
     return project;
   }
 
-  async updateProject(id: string, insertProject: Partial<InsertProject>): Promise<Project> {
+  async updateProject(id: string, userId: string, insertProject: Partial<InsertProject>): Promise<Project> {
     const [project] = await db
       .update(projects)
       .set({
         ...insertProject,
         updatedAt: new Date(),
       })
-      .where(eq(projects.id, id))
+      .where(and(eq(projects.id, id), eq(projects.userId, userId)))
       .returning();
     return project;
   }
 
-  async deleteProject(id: string): Promise<void> {
-    await db.delete(projects).where(eq(projects.id, id));
+  async deleteProject(id: string, userId: string): Promise<void> {
+    await db.delete(projects).where(and(eq(projects.id, id), eq(projects.userId, userId)));
   }
 
   async getAllRepositories(): Promise<GithubRepository[]> {

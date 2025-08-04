@@ -10,3 +10,4 @@ data:
   DATABASE_HOST: "127.0.0.1"
   DATABASE_PORT: "5432"
   DATABASE_NAME: "tandembrain"
+  FIREBASE_PROJECT_ID: "neuronotify"

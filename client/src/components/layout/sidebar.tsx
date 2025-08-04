@@ -10,13 +10,18 @@ import {
   Plus,
   Circle,
   Menu,
-  X
+  X,
+  LogOut,
+  User
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/contexts/AuthContext";
+import { signOutUser } from "@/lib/firebase";
 
 export default function Sidebar() {
-  const [location] = useLocation();
+  const [location, navigate] = useLocation();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const { user } = useAuth();
   
   const { data: stats } = useQuery({
     queryKey: ["/api/dashboard/stats"],
@@ -26,6 +31,15 @@ export default function Sidebar() {
     queryKey: ["/api/projects"],
     select: (data) => data?.slice(0, 2),
   });
+
+  const handleSignOut = async () => {
+    try {
+      await signOutUser();
+      navigate("/login");
+    } catch (error) {
+      console.error("Error signing out:", error);
+    }
+  };
 
   const navItems = [
     {
@@ -68,9 +82,9 @@ export default function Sidebar() {
         <div className="flex items-center justify-between">
           <div className="flex items-center">
             <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center mr-3">
-              <span className="text-white font-bold text-sm">NN</span>
+              <span className="text-white font-bold text-sm">TB</span>
             </div>
-            <h1 className="text-lg font-semibold text-gray-900">Neural Notify</h1>
+            <h1 className="text-lg font-semibold text-gray-900">Tandembrain</h1>
           </div>
           <Button
             variant="ghost"
@@ -99,11 +113,11 @@ export default function Sidebar() {
         <div className="flex items-center px-6 py-4 border-b border-gray-200 lg:block hidden">
           <div className="flex-shrink-0">
             <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-sm">NN</span>
+              <span className="text-white font-bold text-sm">TB</span>
             </div>
           </div>
           <div className="ml-3">
-            <h1 className="text-lg font-semibold text-gray-900">Neural Notify</h1>
+            <h1 className="text-lg font-semibold text-gray-900">Tandembrain</h1>
           </div>
         </div>
       
@@ -156,6 +170,26 @@ export default function Sidebar() {
               View All
             </a>
           </Link>
+        </div>
+        
+        {/* User section */}
+        <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-200">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center">
+              <User className="w-5 h-5 mr-2 text-gray-500" />
+              <span className="text-sm text-gray-700 truncate max-w-[150px]">
+                {user?.email}
+              </span>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleSignOut}
+              className="text-gray-500 hover:text-gray-700"
+            >
+              <LogOut className="w-4 h-4" />
+            </Button>
+          </div>
         </div>
         </div>
       </div>

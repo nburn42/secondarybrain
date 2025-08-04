@@ -12,6 +12,17 @@ export const taskStatusEnum = pgEnum("task_status", [
   "failed"
 ]);
 
+// Users table for authentication
+export const users = pgTable("users", {
+  id: varchar("id").primaryKey(), // Firebase UID
+  email: text("email").notNull().unique(),
+  displayName: text("display_name"),
+  photoURL: text("photo_url"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  lastLoginAt: timestamp("last_login_at"),
+});
+
 export const taskItemTypeEnum = pgEnum("task_item_type", [
   "planning",
   "tool_call",
@@ -23,6 +34,7 @@ export const taskItemTypeEnum = pgEnum("task_item_type", [
 
 export const projects = pgTable("projects", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").references(() => users.id, { onDelete: "cascade" }),
   name: text("name").notNull(),
   description: text("description"),
   status: text("status").notNull().default("active"),
@@ -82,7 +94,15 @@ export const taskItems = pgTable("task_items", {
 
 
 // Relations
-export const projectsRelations = relations(projects, ({ many }) => ({
+export const usersRelations = relations(users, ({ many }) => ({
+  projects: many(projects),
+}));
+
+export const projectsRelations = relations(projects, ({ one, many }) => ({
+  user: one(users, {
+    fields: [projects.userId],
+    references: [users.id],
+  }),
   repositories: many(githubRepositories),
   tasks: many(tasks),
   containers: many(containers),
@@ -163,6 +183,9 @@ export const insertTaskItemSchema = createInsertSchema(taskItems).omit({
 // Types
 export type InsertProject = z.infer<typeof insertProjectSchema>;
 export type Project = typeof projects.$inferSelect;
+
+export type User = typeof users.$inferSelect;
+export type InsertUser = typeof users.$inferInsert;
 
 export type InsertGithubRepository = z.infer<typeof insertGithubRepositorySchema>;
 export type GithubRepository = typeof githubRepositories.$inferSelect;
