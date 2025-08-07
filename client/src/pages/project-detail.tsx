@@ -218,7 +218,12 @@ export default function ProjectDetail() {
   };
 
   const onContainerSubmit = (data: any) => {
-    createContainerMutation.mutate(data);
+    // Remove taskId if it's "none"
+    const submitData = { ...data };
+    if (submitData.taskId === "none") {
+      delete submitData.taskId;
+    }
+    createContainerMutation.mutate(submitData);
   };
 
   if (isLoading) {
@@ -745,14 +750,14 @@ export default function ProjectDetail() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Task (Optional)</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
+                      <Select onValueChange={field.onChange} value={field.value || "none"}>
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder="Select a task to associate" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="">None</SelectItem>
+                          <SelectItem value="none">None</SelectItem>
                           {tasks?.map((task) => (
                             <SelectItem key={task.id} value={task.id}>
                               {task.title}

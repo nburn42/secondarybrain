@@ -26,7 +26,7 @@ import {
   type InsertUser
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, and, isNull, sql } from "drizzle-orm";
+import { eq, desc, and, isNull, sql, inArray } from "drizzle-orm";
 
 export interface IStorage {
   // Users
@@ -51,6 +51,7 @@ export interface IStorage {
 
   // Tasks
   getTasks(): Promise<TaskWithProject[]>;
+  getTasksByUser(userId: string): Promise<TaskWithProject[]>;
   getTasksByProject(projectId: string): Promise<Task[]>;
   getTask(id: string): Promise<TaskWithProject | undefined>;
   getTaskWithChildren(id: string): Promise<TaskWithChildren | undefined>;
@@ -194,6 +195,19 @@ export class DatabaseStorage implements IStorage {
       with: {
         project: true,
       },
+      orderBy: [desc(tasks.createdAt)],
+    });
+  }
+
+  async getTasksByUser(userId: string): Promise<TaskWithProject[]> {
+    return await db.query.tasks.findMany({
+      with: {
+        project: true,
+      },
+      where: inArray(
+        tasks.projectId,
+        db.select({ id: projects.id }).from(projects).where(eq(projects.userId, userId))
+      ),
       orderBy: [desc(tasks.createdAt)],
     });
   }

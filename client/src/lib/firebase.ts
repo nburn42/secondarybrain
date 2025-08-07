@@ -14,12 +14,12 @@ import {
 
 // Your Firebase configuration
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "AIzaSyB3WvpOlnxEiHbQDj_n59sGoieIZW33Gkw",
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || "neuronotify.firebaseapp.com",
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || "neuronotify",
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || "neuronotify.firebasestorage.app",
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "999315855175",
-  appId: import.meta.env.VITE_FIREBASE_APP_ID || "1:999315855175:web:0b089b4591effdd47c5e62"
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID
 };
 
 // Initialize Firebase

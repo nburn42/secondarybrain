@@ -143,9 +143,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Tasks
-  app.get("/api/tasks", async (req, res) => {
+  app.get("/api/tasks", requireAuth, async (req: AuthRequest, res) => {
     try {
-      const tasks = await storage.getTasks();
+      const tasks = await storage.getTasksByUser(req.userId!);
       res.json(tasks);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch tasks" });
