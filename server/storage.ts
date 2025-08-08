@@ -459,9 +459,18 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateContainer(id: string, updates: Partial<InsertContainer>): Promise<Container> {
+    // Convert date strings to Date objects
+    const processedUpdates = { ...updates };
+    if (processedUpdates.startedAt && typeof processedUpdates.startedAt === 'string') {
+      processedUpdates.startedAt = new Date(processedUpdates.startedAt);
+    }
+    if (processedUpdates.completedAt && typeof processedUpdates.completedAt === 'string') {
+      processedUpdates.completedAt = new Date(processedUpdates.completedAt);
+    }
+    
     const [container] = await db
       .update(containers)
-      .set(updates)
+      .set(processedUpdates)
       .where(eq(containers.id, id))
       .returning();
     return container;

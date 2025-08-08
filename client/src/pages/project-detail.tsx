@@ -12,7 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { insertTaskSchema, insertGithubRepositorySchema, insertContainerSchema } from "@shared/schema";
+import { insertTaskSchema, insertGithubRepositorySchema } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -87,15 +87,6 @@ export default function ProjectDetail() {
     },
   });
 
-  const containerForm = useForm({
-    resolver: zodResolver(insertContainerSchema),
-    defaultValues: {
-      name: "",
-      imageTag: "latest",
-      status: "pending",
-      projectId: projectId || "",
-    },
-  });
 
   const createTaskMutation = useMutation({
     mutationFn: async (data: any) => {
@@ -194,7 +185,6 @@ export default function ProjectDetail() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/projects", projectId, "containers"] });
       setIsContainerDialogOpen(false);
-      containerForm.reset();
       toast({
         title: "Success",
         description: "Container created successfully",
@@ -217,14 +207,6 @@ export default function ProjectDetail() {
     createRepoMutation.mutate(data);
   };
 
-  const onContainerSubmit = (data: any) => {
-    // Remove taskId if it's "none"
-    const submitData = { ...data };
-    if (submitData.taskId === "none") {
-      delete submitData.taskId;
-    }
-    createContainerMutation.mutate(submitData);
-  };
 
   if (isLoading) {
     return (
@@ -390,10 +372,10 @@ export default function ProjectDetail() {
                 <div className="space-y-3">
                   {containers?.map((container: any) => (
                     <div key={container.id} className="border border-gray-200 rounded-lg p-4 hover:border-primary transition-colors">
-                      <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center justify-between">
                         <div className="flex items-center">
                           <Container className="w-5 h-5 text-gray-700 mr-2" />
-                          <span className="font-medium text-gray-900">{container.name}</span>
+                          <span className="text-sm text-gray-600">Container {container.id.slice(0, 8)}</span>
                         </div>
                         <div className="flex items-center space-x-2">
                           {container.status === 'running' ? (
@@ -401,21 +383,26 @@ export default function ProjectDetail() {
                               <Play className="w-4 h-4 mr-1" />
                               Running
                             </span>
+                          ) : container.status === 'completed' ? (
+                            <span className="flex items-center text-sm text-blue-600">
+                              <StopCircle className="w-4 h-4 mr-1" />
+                              Completed
+                            </span>
+                          ) : container.status === 'failed' ? (
+                            <span className="flex items-center text-sm text-red-600">
+                              <StopCircle className="w-4 h-4 mr-1" />
+                              Failed
+                            </span>
                           ) : (
                             <span className="flex items-center text-sm text-gray-500">
                               <StopCircle className="w-4 h-4 mr-1" />
-                              Stopped
+                              Pending
                             </span>
                           )}
                         </div>
                       </div>
-                      {container.taskId && (
-                        <div className="text-xs text-gray-500">
-                          <span>Task: {container.taskId}</span>
-                        </div>
-                      )}
                       {container.createdAt && (
-                        <div className="text-xs text-gray-500 mt-1">
+                        <div className="text-xs text-gray-500 mt-2">
                           <span>Created: {new Date(container.createdAt).toLocaleDateString()}</span>
                         </div>
                       )}
@@ -426,7 +413,7 @@ export default function ProjectDetail() {
                     <div className="text-center py-8 text-gray-500">
                       <Container className="w-12 h-12 mx-auto mb-4 text-gray-300" />
                       <p className="text-sm">No containers running</p>
-                      <p className="text-xs mt-1">Containers will appear when tasks are executed</p>
+                      <p className="text-xs mt-1">Click + to create a container</p>
                     </div>
                   )}
                 </div>
@@ -714,97 +701,31 @@ export default function ProjectDetail() {
             <DialogHeader>
               <DialogTitle>Create New Container</DialogTitle>
             </DialogHeader>
-            <Form {...containerForm}>
-              <form onSubmit={containerForm.handleSubmit(onContainerSubmit)} className="space-y-4">
-                <FormField
-                  control={containerForm.control}
-                  name="name"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Container Name</FormLabel>
-                      <FormControl>
-                        <Input placeholder="my-container" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                
-                <FormField
-                  control={containerForm.control}
-                  name="imageTag"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Image Tag</FormLabel>
-                      <FormControl>
-                        <Input placeholder="latest" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={containerForm.control}
-                  name="taskId"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Task (Optional)</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value || "none"}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select a task to associate" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="none">None</SelectItem>
-                          {tasks?.map((task) => (
-                            <SelectItem key={task.id} value={task.id}>
-                              {task.title}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={containerForm.control}
-                  name="logs"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Initial Logs (Optional)</FormLabel>
-                      <FormControl>
-                        <Textarea 
-                          placeholder="Container initialization logs..."
-                          rows={3}
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <div className="flex justify-end space-x-2 pt-4">
-                  <Button 
-                    type="button" 
-                    variant="outline" 
-                    onClick={() => setIsContainerDialogOpen(false)}
-                  >
-                    Cancel
-                  </Button>
-                  <Button 
-                    type="submit" 
-                    disabled={createContainerMutation.isPending}
-                  >
-                    {createContainerMutation.isPending ? "Creating..." : "Create Container"}
-                  </Button>
-                </div>
-              </form>
-            </Form>
+            <div className="py-4">
+              <p className="text-sm text-gray-600">
+                Create a new container for this project. The container will be created with default settings.
+              </p>
+            </div>
+            <div className="flex justify-end space-x-2 pt-4">
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={() => setIsContainerDialogOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button 
+                onClick={() => {
+                  createContainerMutation.mutate({
+                    projectId: projectId || "",
+                    status: "pending"
+                  });
+                }}
+                disabled={createContainerMutation.isPending}
+              >
+                {createContainerMutation.isPending ? "Creating..." : "Create Container"}
+              </Button>
+            </div>
           </DialogContent>
         </Dialog>
       </main>

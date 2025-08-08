@@ -22,6 +22,14 @@ const firebaseConfig = {
   appId: import.meta.env.VITE_FIREBASE_APP_ID
 };
 
+// Debug logging to check what values are loaded
+console.log('Firebase config loaded:', {
+  hasApiKey: !!firebaseConfig.apiKey,
+  apiKeyLength: firebaseConfig.apiKey?.length || 0,
+  projectId: firebaseConfig.projectId,
+  appId: firebaseConfig.appId?.substring(0, 20) + '...'
+});
+
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 

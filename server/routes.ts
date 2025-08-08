@@ -456,9 +456,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         jwtToken,
       });
       
-      // Here we would integrate with GKE to create the actual container
-      // For now, just return the created container record
-      res.status(201).json(container);
+      // Create the actual container in GKE using Kubernetes API
+      const { createAgentJob } = await import('./k8s-client');
+      
+      try {
+        await createAgentJob(container.id, containerData.projectId, jwtToken);
+        
+        // Update container status to running
+        await storage.updateContainer(container.id, { status: 'running', startedAt: new Date() });
+        
+        res.status(201).json({ ...container, status: 'running' });
+      } catch (k8sError) {
+        console.error('Failed to create Kubernetes job:', k8sError);
+        // Update container status to failed
+        await storage.updateContainer(container.id, { status: 'failed' });
+        throw new Error('Failed to create container in cluster');
+      }
     } catch (error) {
       if (error instanceof z.ZodError) {
         return res.status(400).json({ message: "Invalid container data", errors: error.errors });
@@ -484,12 +497,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const container = await storage.updateContainer(req.params.id, req.body);
       res.json(container);
     } catch (error) {
+      console.error('Error updating container:', error);
       res.status(500).json({ message: "Failed to update container" });
     }
   });
 
   app.delete("/api/containers/:id", async (req, res) => {
     try {
+      // Delete the Kubernetes job first
+      const { deleteAgentJob } = await import('./k8s-client');
+      try {
+        await deleteAgentJob(req.params.id);
+      } catch (k8sError) {
+        console.error('Failed to delete Kubernetes job:', k8sError);
+        // Continue with database deletion even if k8s deletion fails
+      }
+      
       await storage.deleteContainer(req.params.id);
       res.status(204).send();
     } catch (error) {

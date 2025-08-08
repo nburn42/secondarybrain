@@ -229,14 +229,11 @@ export type TaskWithProjectAndChildren = Task & {
 export const containers = pgTable("containers", {
   id: text("id").primaryKey().$defaultFn(() => nanoid()),
   projectId: text("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
-  name: text("name").notNull(),
   status: text("status", { enum: ["pending", "running", "completed", "failed"] }).notNull().default("pending"),
-  imageTag: text("image_tag").notNull(),
   jwtToken: text("jwt_token").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   startedAt: timestamp("started_at"),
   completedAt: timestamp("completed_at"),
-  logs: text("logs"),
   exitCode: integer("exit_code"),
 });
 
