@@ -2,19 +2,10 @@
 
 import { initializeApp } from 'firebase/app';
 import { getAuth, signInWithEmailAndPassword } from 'firebase/auth';
+import { config } from './config.js';
 
-// Firebase configuration
-const firebaseConfig = {
-  apiKey: process.env.FIREBASE_API_KEY,
-  authDomain: process.env.FIREBASE_AUTH_DOMAIN || "neuronotify.firebaseapp.com",
-  projectId: process.env.FIREBASE_PROJECT_ID || "neuronotify",
-  storageBucket: process.env.FIREBASE_STORAGE_BUCKET || "neuronotify.firebasestorage.app",
-  messagingSenderId: process.env.FIREBASE_MESSAGING_SENDER_ID,
-  appId: process.env.FIREBASE_APP_ID
-};
-
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
+// Initialize Firebase with type-safe config
+const app = initializeApp(config.firebase);
 const auth = getAuth(app);
 
 async function checkContainers() {
@@ -23,8 +14,8 @@ async function checkContainers() {
     console.log('Signing in...');
     const userCredential = await signInWithEmailAndPassword(
       auth, 
-      'test@neuralviolin.com', 
-      'TestUser123!'
+      config.auth.testEmail, 
+      config.auth.testPassword
     );
     
     const idToken = await userCredential.user.getIdToken();
@@ -55,7 +46,10 @@ async function checkContainers() {
     const containers = await containersResponse.json();
     console.log(`\nFound ${containers.length} containers:`);
     
-    containers.slice(0, 5).forEach(container => {
+    // Sort by creation time descending (newest first)
+    containers.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    
+    containers.slice(0, 10).forEach(container => {
       console.log(`\nContainer ID: ${container.id}`);
       console.log(`Status: ${container.status}`);
       console.log(`Created: ${new Date(container.createdAt).toLocaleString()}`);
