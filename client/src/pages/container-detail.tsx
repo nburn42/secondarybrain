@@ -148,7 +148,7 @@ export default function ContainerDetail() {
     resumeContainerMutation.mutate(containerId);
   };
 
-  const getStatusIcon = (status: ContainerType["status"] | string) => {
+  const getStatusIcon = (status: string) => {
     switch (status) {
       case "pending":
         return <Clock className="h-5 w-5" />;
@@ -169,7 +169,7 @@ export default function ContainerDetail() {
     }
   };
 
-  const getStatusColor = (status: ContainerType["status"] | string) => {
+  const getStatusColor = (status: string) => {
     switch (status) {
       case "pending":
         return "bg-yellow-100 text-yellow-800 border-yellow-200";
@@ -349,33 +349,20 @@ export default function ContainerDetail() {
                   </p>
                 </div>
               </div>
-              <div className="flex flex-col items-end gap-2">
+              {liveStatus && (
                 <div className="flex items-center gap-2">
-                  <span className="text-xs text-gray-500">DB Status:</span>
-                  <Badge variant="outline" className={getStatusColor(container.status)} title="Status saved in database">
-                    {getStatusIcon(container.status)}
-                    <span className="ml-2 capitalize">{container.status}</span>
+                  <Badge 
+                    variant="outline" 
+                    className={getStatusColor(liveStatus.status)}
+                    title={getStatusDescription(liveStatus.status)}
+                  >
+                    {getStatusIcon(liveStatus.status)}
+                    <span className="ml-2 capitalize">
+                      {liveStatus.status === 'not_found' ? 'Not Found' : liveStatus.status}
+                    </span>
                   </Badge>
                 </div>
-                {liveStatus && (
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs text-gray-500">Live Status:</span>
-                    <Badge 
-                      variant="outline" 
-                      className={getStatusColor(liveStatus.status)}
-                      title={getStatusDescription(liveStatus.status)}
-                    >
-                      {getStatusIcon(liveStatus.status)}
-                      <span className="ml-2 capitalize">
-                        {liveStatus.status === 'not_found' ? 'Not Found' : liveStatus.status}
-                      </span>
-                    </Badge>
-                    {liveStatus.status !== container.status && liveStatus.status !== 'not_found' && (
-                      <RefreshCw className="h-3 w-3 text-blue-500 animate-spin" title="Syncing with cluster" />
-                    )}
-                  </div>
-                )}
-              </div>
+              )}
             </div>
           </CardHeader>
           <CardContent>
