@@ -8,6 +8,7 @@ import {
   type Project, 
   type InsertProject,
   type GithubRepository,
+  type GithubRepositoryWithProject,
   type InsertGithubRepository,
   type InsertGlobalRepository,
   type Task,
@@ -26,7 +27,7 @@ import {
   type InsertUser
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, and, isNull, sql, inArray } from "drizzle-orm";
+import { eq, desc, and, or, isNull, sql, inArray } from "drizzle-orm";
 
 export interface IStorage {
   // Users
@@ -43,6 +44,8 @@ export interface IStorage {
 
   // GitHub Repositories
   getAllRepositories(): Promise<GithubRepository[]>;
+  getRepository(id: string): Promise<GithubRepositoryWithProject | undefined>;
+  getRepositoriesByUser(userId: string): Promise<GithubRepository[]>;
   getRepositoriesByProject(projectId: string): Promise<GithubRepository[]>;
   createRepository(repository: InsertGithubRepository): Promise<GithubRepository>;
   createGlobalRepository(repository: InsertGlobalRepository): Promise<GithubRepository>;
@@ -157,6 +160,43 @@ export class DatabaseStorage implements IStorage {
 
   async getAllRepositories(): Promise<GithubRepository[]> {
     return await db.select().from(githubRepositories).orderBy(desc(githubRepositories.createdAt));
+  }
+
+  async getRepository(id: string): Promise<GithubRepositoryWithProject | undefined> {
+    return await db.query.githubRepositories.findFirst({
+      where: eq(githubRepositories.id, id),
+      with: {
+        project: true,
+      },
+    }) as GithubRepositoryWithProject | undefined;
+  }
+
+  async getRepositoriesByUser(userId: string): Promise<GithubRepository[]> {
+    // Get repositories that belong to user's projects + global repositories (no projectId)
+    const result = await db
+      .select({
+        id: githubRepositories.id,
+        projectId: githubRepositories.projectId,
+        owner: githubRepositories.owner,
+        url: githubRepositories.url,
+        name: githubRepositories.name,
+        description: githubRepositories.description,
+        lastUpdated: githubRepositories.lastUpdated,
+        createdAt: githubRepositories.createdAt,
+        githubToken: githubRepositories.githubToken,
+        isPrivate: githubRepositories.isPrivate
+      })
+      .from(githubRepositories)
+      .leftJoin(projects, eq(githubRepositories.projectId, projects.id))
+      .where(
+        or(
+          eq(projects.userId, userId), // Repos from user's projects
+          isNull(githubRepositories.projectId) // Global repositories
+        )
+      )
+      .orderBy(desc(githubRepositories.createdAt));
+    
+    return result;
   }
 
   async getRepositoriesByProject(projectId: string): Promise<GithubRepository[]> {

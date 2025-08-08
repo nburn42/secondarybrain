@@ -30,6 +30,7 @@ import {
   StopCircle
 } from "lucide-react";
 import { Link } from "wouter";
+import ContainerCard from "@/components/container-card";
 
 export default function ProjectDetail() {
   const [, params] = useRoute("/projects/:id");
@@ -72,8 +73,6 @@ export default function ProjectDetail() {
       description: "",
       status: "pending",
       priority: 1.0,
-      estimatedHours: 0,
-      authorName: "",
       projectId: projectId || "",
     },
   });
@@ -371,42 +370,10 @@ export default function ProjectDetail() {
                 
                 <div className="space-y-3">
                   {containers?.map((container: any) => (
-                    <div key={container.id} className="border border-gray-200 rounded-lg p-4 hover:border-primary transition-colors">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center">
-                          <Container className="w-5 h-5 text-gray-700 mr-2" />
-                          <span className="text-sm text-gray-600">Container {container.id.slice(0, 8)}</span>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          {container.status === 'running' ? (
-                            <span className="flex items-center text-sm text-green-600">
-                              <Play className="w-4 h-4 mr-1" />
-                              Running
-                            </span>
-                          ) : container.status === 'completed' ? (
-                            <span className="flex items-center text-sm text-blue-600">
-                              <StopCircle className="w-4 h-4 mr-1" />
-                              Completed
-                            </span>
-                          ) : container.status === 'failed' ? (
-                            <span className="flex items-center text-sm text-red-600">
-                              <StopCircle className="w-4 h-4 mr-1" />
-                              Failed
-                            </span>
-                          ) : (
-                            <span className="flex items-center text-sm text-gray-500">
-                              <StopCircle className="w-4 h-4 mr-1" />
-                              Pending
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                      {container.createdAt && (
-                        <div className="text-xs text-gray-500 mt-2">
-                          <span>Created: {new Date(container.createdAt).toLocaleDateString()}</span>
-                        </div>
-                      )}
-                    </div>
+                    <ContainerCard
+                      key={container.id}
+                      container={container}
+                    />
                   ))}
                   
                   {(!containers || containers.length === 0) && (
@@ -498,57 +465,22 @@ export default function ProjectDetail() {
                   )}
                 />
 
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField
-                    control={taskForm.control}
-                    name="priority"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Priority (0-10)</FormLabel>
-                        <FormControl>
-                          <Input 
-                            type="number" 
-                            step="0.1"
-                            min="0"
-                            max="10"
-                            placeholder="1.0"
-                            {...field}
-                            onChange={(e) => field.onChange(parseFloat(e.target.value) || 1.0)}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={taskForm.control}
-                    name="estimatedHours"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Estimated Hours</FormLabel>
-                        <FormControl>
-                          <Input 
-                            type="number" 
-                            placeholder="0"
-                            {...field}
-                            onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-
                 <FormField
                   control={taskForm.control}
-                  name="authorName"
+                  name="priority"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Author Name</FormLabel>
+                      <FormLabel>Priority (0-10)</FormLabel>
                       <FormControl>
-                        <Input placeholder="Enter author name" {...field} />
+                        <Input 
+                          type="number" 
+                          step="0.1"
+                          min="0"
+                          max="10"
+                          placeholder="1.0"
+                          {...field}
+                          onChange={(e) => field.onChange(parseFloat(e.target.value) || 1.0)}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>

@@ -246,3 +246,51 @@ export async function deleteAgentJob(containerId: string) {
     throw error;
   }
 }
+
+export async function getAgentLogs(containerId: string): Promise<string> {
+  const api = getCoreV1Client();
+  const namespace = 'tandembrain';
+  // Sanitize the container ID the same way as in createAgentJob
+  const sanitizedId = containerId.toLowerCase().replace(/[^a-z0-9-]/g, '').replace(/^-+|-+$/g, '').replace(/--+/g, '-');
+  const labelSelector = `job-name=agent-${sanitizedId}`;
+  
+  try {
+    // First, find the pod created by this job
+    // listNamespacedPod parameters: namespace, pretty, _continue, fieldSelector, labelSelector
+    const podsResponse = await api.listNamespacedPod(
+      namespace,
+      undefined, // pretty
+      undefined, // _continue
+      undefined, // fieldSelector
+      labelSelector // labelSelector
+    );
+    
+    if (podsResponse.body.items.length === 0) {
+      throw new Error('No pods found for this container');
+    }
+    
+    // Get the first pod (there should only be one)
+    const pod = podsResponse.body.items[0];
+    const podName = pod.metadata!.name!;
+    
+    // Get logs from the pod
+    const logsResponse = await api.readNamespacedPodLog(
+      podName,
+      namespace,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined
+    );
+    
+    return logsResponse.body;
+  } catch (error) {
+    console.error('Failed to fetch container logs:', error);
+    throw error;
+  }
+}

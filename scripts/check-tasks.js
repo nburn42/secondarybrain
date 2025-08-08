@@ -8,10 +8,10 @@ import { config } from './config.js';
 const app = initializeApp(config.firebase);
 const auth = getAuth(app);
 
-async function testContainer() {
+async function checkTasks() {
   try {
     // Sign in as test user
-    console.log('Signing in as test user...');
+    console.log('Signing in...');
     const userCredential = await signInWithEmailAndPassword(
       auth, 
       config.auth.testEmail, 
@@ -19,7 +19,6 @@ async function testContainer() {
     );
     
     const idToken = await userCredential.user.getIdToken();
-    console.log('Successfully authenticated');
     
     // Get the first project
     const projectsResponse = await fetch('https://tandembrain.com/api/projects', {
@@ -35,32 +34,31 @@ async function testContainer() {
     }
     
     const projectId = projects[0].id;
-    console.log('Using project:', projectId);
     
-    // Create a container
-    console.log('\nCreating container...');
-    const containerResponse = await fetch(`https://tandembrain.com/api/projects/${projectId}/containers`, {
-      method: 'POST',
+    // Get tasks
+    console.log('\nFetching tasks...');
+    const tasksResponse = await fetch(`https://tandembrain.com/api/projects/${projectId}/tasks`, {
       headers: {
-        'Content-Type': 'application/json',
         'Authorization': `Bearer ${idToken}`
-      },
-      body: JSON.stringify({
-        status: 'pending'
-      })
+      }
     });
     
-    if (!containerResponse.ok) {
-      throw new Error(`Failed to create container: ${containerResponse.status} ${await containerResponse.text()}`);
-    }
+    const tasks = await tasksResponse.json();
+    console.log(`\nFound ${tasks.length} tasks:`);
     
-    const container = await containerResponse.json();
-    console.log('Created container:', container.id);
-    console.log('Container status:', container.status);
+    // Sort by creation time descending (newest first)
+    tasks.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
     
-    // Check Kubernetes job
-    console.log('\n✅ Container created successfully!');
-    console.log('Check the job with: kubectl get jobs -n tandembrain');
+    tasks.slice(0, 5).forEach(task => {
+      console.log(`\nTask ID: ${task.id}`);
+      console.log(`Title: ${task.title}`);
+      console.log(`Status: ${task.status}`);
+      console.log(`Priority: ${task.priority}`);
+      console.log(`Created: ${new Date(task.createdAt).toLocaleString()}`);
+      if (task.completedAt) {
+        console.log(`Completed: ${new Date(task.completedAt).toLocaleString()}`);
+      }
+    });
     
   } catch (error) {
     console.error('Error:', error);
@@ -70,4 +68,4 @@ async function testContainer() {
   process.exit(0);
 }
 
-testContainer();
+checkTasks();

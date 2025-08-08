@@ -77,17 +77,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // GitHub Repositories
-  app.get("/api/repositories", async (req, res) => {
+  // GitHub Repositories (requires auth - returns only user's repositories)
+  app.get("/api/repositories", requireAuth, async (req: AuthRequest, res) => {
     try {
-      const repositories = await storage.getAllRepositories();
+      const repositories = await storage.getRepositoriesByUser(req.userId!);
       res.json(repositories);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch repositories" });
     }
   });
 
-  app.post("/api/repositories", async (req, res) => {
+  app.post("/api/repositories", requireAuth, async (req: AuthRequest, res) => {
     try {
       const validatedData = insertGlobalRepositorySchema.parse(req.body);
       const repository = await storage.createGlobalRepository(validatedData);
@@ -133,8 +133,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/repositories/:id", async (req, res) => {
+  app.delete("/api/repositories/:id", requireAuth, async (req: AuthRequest, res) => {
     try {
+      // Get repository with project to verify ownership
+      const repository = await storage.getRepository(req.params.id);
+      
+      if (!repository) {
+        return res.status(404).json({ message: "Repository not found" });
+      }
+      
+      // Check if repository belongs to a project and if user owns that project
+      if (repository.projectId && repository.project) {
+        if (repository.project.userId !== req.userId) {
+          return res.status(403).json({ message: "You don't have permission to delete this repository" });
+        }
+      } else if (repository.projectId && !repository.project) {
+        // Repository has projectId but project not found - inconsistent state
+        return res.status(500).json({ message: "Repository project not found" });
+      }
+      // Global repositories (no projectId) can be deleted by any authenticated user
+      // You might want to restrict this based on your requirements
+      
       await storage.deleteRepository(req.params.id);
       res.status(204).send();
     } catch (error) {
@@ -437,6 +456,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const containers = await storage.getContainersByProject(req.params.projectId);
       res.json(containers);
     } catch (error) {
+      console.error('Error fetching containers:', error);
       res.status(500).json({ message: "Failed to fetch containers" });
     }
   });
@@ -473,6 +493,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         throw new Error('Failed to create container in cluster');
       }
     } catch (error) {
+      console.error('Container creation error:', error);
       if (error instanceof z.ZodError) {
         return res.status(400).json({ message: "Invalid container data", errors: error.errors });
       }
@@ -517,6 +538,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(204).send();
     } catch (error) {
       res.status(500).json({ message: "Failed to delete container" });
+    }
+  });
+
+  app.get("/api/containers/:id/logs", async (req, res) => {
+    try {
+      const container = await storage.getContainer(req.params.id);
+      if (!container) {
+        return res.status(404).json({ message: "Container not found" });
+      }
+
+      // Fetch logs from Kubernetes
+      const { getAgentLogs } = await import('./k8s-client');
+      
+      try {
+        const logs = await getAgentLogs(req.params.id);
+        res.json({ logs });
+      } catch (k8sError) {
+        console.error('Failed to fetch container logs:', k8sError);
+        res.json({ logs: null, message: "Container logs not available" });
+      }
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch container logs" });
     }
   });
 

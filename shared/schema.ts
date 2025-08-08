@@ -170,6 +170,8 @@ export const insertTaskSchema = createInsertSchema(tasks).omit({
   createdAt: true,
   updatedAt: true,
   completedAt: true,
+  estimatedHours: true,
+  authorName: true,
 }).extend({
   priority: z.number().min(0).max(10).default(1.0),
 });
@@ -204,6 +206,10 @@ export type ProjectWithRelations = Project & {
   tasks: Task[];
 };
 
+export type GithubRepositoryWithProject = GithubRepository & {
+  project: Project | null;
+};
+
 export type TaskWithProject = Task & {
   project: Project;
 };
@@ -229,6 +235,8 @@ export type TaskWithProjectAndChildren = Task & {
 export const containers = pgTable("containers", {
   id: text("id").primaryKey().$defaultFn(() => nanoid()),
   projectId: text("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+  name: text("name"),
+  imageTag: text("image_tag").default("latest"),
   status: text("status", { enum: ["pending", "running", "completed", "failed"] }).notNull().default("pending"),
   jwtToken: text("jwt_token").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),

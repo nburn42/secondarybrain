@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Container } from "@shared/schema";
 import { Clock, Play, CheckCircle, XCircle, Trash2, Eye } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
+import { Link } from "wouter";
 
 interface ContainerCardProps {
   container: Container;
@@ -64,28 +65,30 @@ export default function ContainerCard({ container, onDelete, onViewLogs }: Conta
     <Card className="hover:shadow-md transition-shadow">
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between">
-          <div className="space-y-1">
-            <CardTitle className="text-lg font-semibold">{container.name}</CardTitle>
-            <div className="flex items-center space-x-2">
-              <Badge variant="outline" className={getStatusColor()}>
-                {getStatusIcon()}
-                <span className="ml-1 capitalize">{container.status}</span>
-              </Badge>
-              <span className="text-sm text-gray-500">
-                {container.imageTag}
-              </span>
+          <Link href={`/containers/${container.id}`} className="flex-1">
+            <div className="space-y-1 cursor-pointer">
+              <CardTitle className="text-lg font-semibold hover:text-blue-600 transition-colors">
+                {container.name || `Container ${container.id.slice(0, 8)}`}
+              </CardTitle>
+              <div className="flex items-center space-x-2">
+                <Badge variant="outline" className={getStatusColor()}>
+                  {getStatusIcon()}
+                  <span className="ml-1 capitalize">{container.status}</span>
+                </Badge>
+                <span className="text-sm text-gray-500">
+                  {container.imageTag}
+                </span>
+              </div>
             </div>
-          </div>
-          <div className="flex items-center space-x-2">
-            {container.logs && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => onViewLogs?.(container.id)}
-              >
-                <Eye className="h-4 w-4" />
-              </Button>
-            )}
+          </Link>
+          <div className="flex items-center space-x-2 ml-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => onViewLogs?.(container.id)}
+            >
+              <Eye className="h-4 w-4" />
+            </Button>
             <Button
               variant="ghost"
               size="sm"

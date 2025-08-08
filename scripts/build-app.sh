@@ -32,9 +32,28 @@ fi
 echo "🔐 Configuring Docker authentication..."
 gcloud auth configure-docker ${REGION}-docker.pkg.dev --quiet
 
-# Build the Docker image
+# Load environment variables from .env file if it exists
+if [ -f .env ]; then
+    echo "📋 Loading environment variables from .env file..."
+    export $(grep -E '^VITE_FIREBASE_' .env | xargs)
+fi
+
+# Check if required Firebase environment variables are set
+if [ -z "$VITE_FIREBASE_API_KEY" ]; then
+    echo "❌ Error: VITE_FIREBASE_API_KEY not set. Please check your .env file."
+    exit 1
+fi
+
+# Build the Docker image with Firebase configuration from environment
 echo "🔨 Building Docker image..."
-docker build -t ${FULL_IMAGE_NAME}:latest .
+docker build -t ${FULL_IMAGE_NAME}:latest \
+  --build-arg VITE_FIREBASE_API_KEY="$VITE_FIREBASE_API_KEY" \
+  --build-arg VITE_FIREBASE_AUTH_DOMAIN="$VITE_FIREBASE_AUTH_DOMAIN" \
+  --build-arg VITE_FIREBASE_PROJECT_ID="$VITE_FIREBASE_PROJECT_ID" \
+  --build-arg VITE_FIREBASE_STORAGE_BUCKET="$VITE_FIREBASE_STORAGE_BUCKET" \
+  --build-arg VITE_FIREBASE_MESSAGING_SENDER_ID="$VITE_FIREBASE_MESSAGING_SENDER_ID" \
+  --build-arg VITE_FIREBASE_APP_ID="$VITE_FIREBASE_APP_ID" \
+  .
 
 # Tag with timestamp
 TIMESTAMP=$(date +%Y%m%d-%H%M%S)

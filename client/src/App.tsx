@@ -11,6 +11,7 @@ import Repositories from "@/pages/repositories";
 import Approvals from "@/pages/approvals";
 import Tasks from "@/pages/tasks";
 import TaskDetail from "@/pages/task-detail";
+import ContainerDetail from "@/pages/container-detail";
 import Sidebar from "@/components/layout/sidebar";
 import PWAInstallPrompt from "@/components/pwa-install-prompt";
 import { LoginPage } from "@/pages/login";
@@ -72,6 +73,9 @@ function Router() {
           </Route>
           <Route path="/tasks/:id">
             {(params) => user ? <TaskDetail {...params} /> : <Redirect to="/login" />}
+          </Route>
+          <Route path="/containers/:id">
+            {(params) => user ? <ContainerDetail {...params} /> : <Redirect to="/login" />}
           </Route>
           <Route component={NotFound} />
         </Switch>
