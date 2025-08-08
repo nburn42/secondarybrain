@@ -247,48 +247,177 @@ export async function deleteAgentJob(containerId: string) {
   }
 }
 
-export async function getAgentLogs(containerId: string): Promise<string> {
+export async function getContainerLiveStatus(containerId: string): Promise<{
+  status: 'running' | 'completed' | 'failed' | 'pending' | 'paused' | 'not_found';
+  podPhase?: string;
+  exitCode?: number;
+  reason?: string;
+}> {
   const api = getCoreV1Client();
-  const namespace = 'tandembrain';
-  // Sanitize the container ID the same way as in createAgentJob
+  const batchApi = getK8sClient();
   const sanitizedId = containerId.toLowerCase().replace(/[^a-z0-9-]/g, '').replace(/^-+|-+$/g, '').replace(/--+/g, '-');
-  const labelSelector = `job-name=agent-${sanitizedId}`;
+  const jobName = `agent-${sanitizedId}`;
   
   try {
-    // First, find the pod created by this job
-    const podsResponse = await api.listNamespacedPod(
-      namespace,
-      undefined,
-      undefined,
-      undefined,
-      undefined,
-      labelSelector
-    );
+    // First check if the job exists
+    const jobResponse: any = await batchApi.readNamespacedJob({
+      name: jobName,
+      namespace: 'tandembrain'
+    } as any);
     
-    if (podsResponse.body.items.length === 0) {
-      throw new Error('No pods found for this container');
+    const job = jobResponse.body || jobResponse;
+    
+    // Check if job is suspended (paused)
+    if (job.spec?.suspend === true) {
+      return { status: 'paused' };
+    }
+    
+    // Check job status
+    if (job.status?.succeeded > 0) {
+      return { status: 'completed', exitCode: 0 };
+    }
+    
+    if (job.status?.failed > 0) {
+      return { status: 'failed', exitCode: 1 };
+    }
+    
+    // Check pod status for more details
+    const podsResponse: any = await api.listNamespacedPod({
+      namespace: 'tandembrain',
+      labelSelector: `job-name=${jobName}`
+    } as any);
+    
+    const pods = podsResponse.body?.items || podsResponse.items || [];
+    
+    if (pods.length === 0) {
+      return { status: 'pending', reason: 'No pods created yet' };
+    }
+    
+    const pod = pods[0];
+    const podPhase = pod.status?.phase;
+    
+    if (podPhase === 'Running') {
+      return { status: 'running', podPhase };
+    } else if (podPhase === 'Succeeded') {
+      const containerStatus = pod.status?.containerStatuses?.[0];
+      const exitCode = containerStatus?.state?.terminated?.exitCode || 0;
+      return { status: 'completed', podPhase, exitCode };
+    } else if (podPhase === 'Failed') {
+      const containerStatus = pod.status?.containerStatuses?.[0];
+      const exitCode = containerStatus?.state?.terminated?.exitCode || 1;
+      const reason = containerStatus?.state?.terminated?.reason || 'Unknown error';
+      return { status: 'failed', podPhase, exitCode, reason };
+    } else if (podPhase === 'Pending') {
+      return { status: 'pending', podPhase };
+    }
+    
+    return { status: 'pending', podPhase };
+  } catch (error: any) {
+    if (error.response?.statusCode === 404) {
+      return { status: 'not_found' };
+    }
+    console.error('Failed to get container live status:', error);
+    throw error;
+  }
+}
+
+export async function pauseContainer(containerId: string): Promise<void> {
+  const api = getK8sClient();
+  const sanitizedId = containerId.toLowerCase().replace(/[^a-z0-9-]/g, '').replace(/^-+|-+$/g, '').replace(/--+/g, '-');
+  const jobName = `agent-${sanitizedId}`;
+  
+  try {
+    // Suspend the job (pause it)
+    await api.patchNamespacedJob({
+      name: jobName,
+      namespace: 'tandembrain',
+      body: {
+        spec: {
+          suspend: true
+        }
+      }
+    } as any);
+  } catch (error) {
+    console.error('Failed to pause container:', error);
+    throw error;
+  }
+}
+
+export async function resumeContainer(containerId: string): Promise<void> {
+  const api = getK8sClient();
+  const sanitizedId = containerId.toLowerCase().replace(/[^a-z0-9-]/g, '').replace(/^-+|-+$/g, '').replace(/--+/g, '-');
+  const jobName = `agent-${sanitizedId}`;
+  
+  try {
+    // Resume the job (unpause it)
+    await api.patchNamespacedJob({
+      name: jobName,
+      namespace: 'tandembrain',
+      body: {
+        spec: {
+          suspend: false
+        }
+      }
+    } as any);
+  } catch (error) {
+    console.error('Failed to resume container:', error);
+    throw error;
+  }
+}
+
+export async function getAgentLogs(containerId: string): Promise<string> {
+  const api = getCoreV1Client();
+  // Sanitize the container ID the same way as in createAgentJob
+  const sanitizedId = containerId.toLowerCase().replace(/[^a-z0-9-]/g, '').replace(/^-+|-+$/g, '').replace(/--+/g, '-');
+  const podNamePrefix = `agent-${sanitizedId}`;
+  
+  try {
+    // List pods with the job label
+    const podsResponse: any = await api.listNamespacedPod({
+      namespace: 'tandembrain',
+      labelSelector: `job-name=${podNamePrefix}`
+    } as any);
+    
+    // Check if response has body.items or direct items
+    const pods = podsResponse.body?.items || podsResponse.items || [];
+    
+    if (pods.length === 0) {
+      // Fallback: try to find by name prefix
+      const allPodsResponse: any = await api.listNamespacedPod({
+        namespace: 'tandembrain'
+      } as any);
+      
+      const allPods = allPodsResponse.body?.items || allPodsResponse.items || [];
+      const matchingPods = allPods.filter((pod: any) => 
+        pod.metadata?.name?.startsWith(podNamePrefix)
+      );
+      
+      if (matchingPods.length === 0) {
+        throw new Error('No pods found for this container');
+      }
+      
+      const podName = matchingPods[0].metadata!.name!;
+      const logsResponse: any = await api.readNamespacedPodLog({
+        name: podName,
+        namespace: 'tandembrain'
+      } as any);
+      
+      // Logs might be in body or directly in response
+      return logsResponse.body || logsResponse;
     }
     
     // Get the first pod (there should only be one)
-    const pod = podsResponse.body.items[0];
+    const pod = pods[0];
     const podName = pod.metadata!.name!;
     
     // Get logs from the pod
-    const logsResponse = await api.readNamespacedPodLog(
-      podName,
-      namespace,
-      undefined,
-      undefined,
-      undefined,
-      undefined,
-      undefined,
-      undefined,
-      undefined,
-      undefined,
-      undefined
-    );
+    const logsResponse: any = await api.readNamespacedPodLog({
+      name: podName,
+      namespace: 'tandembrain'
+    } as any);
     
-    return logsResponse.body;
+    // Logs might be in body or directly in response
+    return logsResponse.body || logsResponse;
   } catch (error) {
     console.error('Failed to fetch container logs:', error);
     throw error;

@@ -63,8 +63,6 @@ export const tasks = pgTable("tasks", {
   description: text("description"),
   status: taskStatusEnum("status").notNull().default("pending"),
   priority: real("priority").notNull().default(1.0),
-  estimatedHours: integer("estimated_hours"),
-  authorName: text("author_name").notNull(),
   containerId: varchar("container_id").references(() => containers.id),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
@@ -170,8 +168,6 @@ export const insertTaskSchema = createInsertSchema(tasks).omit({
   createdAt: true,
   updatedAt: true,
   completedAt: true,
-  estimatedHours: true,
-  authorName: true,
 }).extend({
   priority: z.number().min(0).max(10).default(1.0),
 });
@@ -237,7 +233,7 @@ export const containers = pgTable("containers", {
   projectId: text("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
   name: text("name"),
   imageTag: text("image_tag").default("latest"),
-  status: text("status", { enum: ["pending", "running", "completed", "failed"] }).notNull().default("pending"),
+  status: text("status", { enum: ["pending", "running", "completed", "failed", "paused"] }).notNull().default("pending"),
   jwtToken: text("jwt_token").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   startedAt: timestamp("started_at"),

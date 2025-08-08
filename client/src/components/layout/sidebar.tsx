@@ -12,7 +12,8 @@ import {
   Menu,
   X,
   LogOut,
-  User
+  User,
+  Container
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
@@ -53,6 +54,12 @@ export default function Sidebar() {
       href: "/projects",
       icon: FolderOpen,
       current: location === "/projects",
+    },
+    {
+      name: "Containers",
+      href: "/containers",
+      icon: Container,
+      current: location === "/containers",
     },
     {
       name: "Repositories",

@@ -59,10 +59,6 @@ export default function TaskCard({ task, showProject = false, onEdit, onDelete }
               <span className={getPriorityColor(task.priority)}>
                 Priority: {task.priority.toFixed(1)}
               </span>
-              {task.estimatedHours && (
-                <span>Estimate: {task.estimatedHours} hours</span>
-              )}
-              <span>Author: {task.authorName}</span>
               {showProject && 'project' in task && (
                 <span>Project: {task.project.name}</span>
               )}

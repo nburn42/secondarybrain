@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { ApprovalQueueWithTask } from "@shared/schema";
 import { Button } from "@/components/ui/button";
-import { X, Check, Clock, User, Zap } from "lucide-react";
+import { X, Check, Clock, Zap } from "lucide-react";
 import { motion, useMotionValue, useTransform, PanInfo } from "framer-motion";
 
 interface SwipeCardProps {
@@ -84,19 +84,6 @@ export default function SwipeCard({ approval, onApprove, onReject }: SwipeCardPr
               <span className={`font-medium flex items-center gap-1 ${getPriorityColor(approval.task.priority)}`}>
                 {getPriorityIcon(approval.task.priority)}
                 {approval.task.priority.toFixed(1)}
-              </span>
-            </div>
-            {approval.task.estimatedHours && (
-              <div className="flex items-center text-sm">
-                <span className="text-gray-500 w-20">Estimate:</span>
-                <span className="text-gray-900">{approval.task.estimatedHours} hours</span>
-              </div>
-            )}
-            <div className="flex items-center text-sm">
-              <span className="text-gray-500 w-20">Author:</span>
-              <span className="text-gray-900 flex items-center gap-1">
-                <User className="w-3 h-3" />
-                {approval.task.authorName}
               </span>
             </div>
           </div>

@@ -47,8 +47,8 @@ export default function ContainerDetail() {
   const { data: logsData, isLoading: logsLoading } = useQuery({
     queryKey: ["/api/containers", containerId, "logs"],
     queryFn: async () => {
-      const response = await apiRequest(`/api/containers/${containerId}/logs`);
-      return response;
+      const response = await apiRequest("GET", `/api/containers/${containerId}/logs`);
+      return await response.json();
     },
     enabled: !!containerId,
     refetchInterval: container?.status === "running" ? 5000 : false, // Auto-refresh logs for running containers
@@ -56,9 +56,7 @@ export default function ContainerDetail() {
 
   const deleteContainerMutation = useMutation({
     mutationFn: async (id: string) => {
-      const response = await apiRequest(`/api/containers/${id}`, {
-        method: "DELETE",
-      });
+      const response = await apiRequest("DELETE", `/api/containers/${id}`);
       return response;
     },
     onSuccess: () => {

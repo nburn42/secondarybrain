@@ -77,6 +77,7 @@ export interface IStorage {
   
   // Containers
   getContainersByProject(projectId: string): Promise<Container[]>;
+  getContainersByUser(userId: string): Promise<Container[]>;
   getContainer(id: string): Promise<Container | undefined>;
   createContainer(container: InsertContainer): Promise<Container>;
   updateContainer(id: string, updates: Partial<InsertContainer>): Promise<Container>;
@@ -483,6 +484,25 @@ export class DatabaseStorage implements IStorage {
   // Container operations
   async getContainersByProject(projectId: string): Promise<Container[]> {
     return await db.select().from(containers).where(eq(containers.projectId, projectId));
+  }
+
+  async getContainersByUser(userId: string): Promise<Container[]> {
+    return await db
+      .select({
+        id: containers.id,
+        projectId: containers.projectId,
+        name: containers.name,
+        imageTag: containers.imageTag,
+        status: containers.status,
+        jwtToken: containers.jwtToken,
+        createdAt: containers.createdAt,
+        startedAt: containers.startedAt,
+        completedAt: containers.completedAt,
+        exitCode: containers.exitCode,
+      })
+      .from(containers)
+      .innerJoin(projects, eq(containers.projectId, projects.id))
+      .where(eq(projects.userId, userId));
   }
 
   async getContainer(id: string): Promise<Container | undefined> {

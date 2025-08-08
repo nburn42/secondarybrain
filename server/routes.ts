@@ -451,6 +451,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Container routes
+  app.get("/api/containers", requireAuth, async (req: AuthRequest, res) => {
+    try {
+      const containers = await storage.getContainersByUser(req.userId!);
+      res.json(containers);
+    } catch (error) {
+      console.error('Error fetching user containers:', error);
+      res.status(500).json({ message: "Failed to fetch containers" });
+    }
+  });
+
   app.get("/api/projects/:projectId/containers", async (req, res) => {
     try {
       const containers = await storage.getContainersByProject(req.params.projectId);
@@ -560,6 +570,91 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch container logs" });
+    }
+  });
+
+  app.get("/api/containers/:id/live-status", async (req, res) => {
+    try {
+      const container = await storage.getContainer(req.params.id);
+      if (!container) {
+        return res.status(404).json({ message: "Container not found" });
+      }
+
+      // Get live status from Kubernetes
+      const { getContainerLiveStatus } = await import('./k8s-client');
+      
+      try {
+        const liveStatus = await getContainerLiveStatus(req.params.id);
+        
+        // Update database if status changed
+        if (liveStatus.status !== container.status && liveStatus.status !== 'not_found') {
+          const updateData: any = { status: liveStatus.status };
+          
+          if (liveStatus.status === 'running' && !container.startedAt) {
+            updateData.startedAt = new Date();
+          } else if ((liveStatus.status === 'completed' || liveStatus.status === 'failed') && !container.completedAt) {
+            updateData.completedAt = new Date();
+            if (liveStatus.exitCode !== undefined) {
+              updateData.exitCode = liveStatus.exitCode;
+            }
+          }
+          
+          await storage.updateContainer(req.params.id, updateData);
+        }
+        
+        res.json(liveStatus);
+      } catch (k8sError) {
+        console.error('Failed to get container live status:', k8sError);
+        res.status(500).json({ message: "Failed to get container live status" });
+      }
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch container status" });
+    }
+  });
+
+  app.post("/api/containers/:id/pause", async (req, res) => {
+    try {
+      const container = await storage.getContainer(req.params.id);
+      if (!container) {
+        return res.status(404).json({ message: "Container not found" });
+      }
+
+      // Pause container in Kubernetes
+      const { pauseContainer } = await import('./k8s-client');
+      
+      try {
+        await pauseContainer(req.params.id);
+        await storage.updateContainer(req.params.id, { status: 'paused' as any });
+        res.json({ success: true, message: "Container paused" });
+      } catch (k8sError) {
+        console.error('Failed to pause container:', k8sError);
+        res.status(500).json({ message: "Failed to pause container" });
+      }
+    } catch (error) {
+      res.status(500).json({ message: "Failed to pause container" });
+    }
+  });
+
+  app.post("/api/containers/:id/resume", async (req, res) => {
+    try {
+      const container = await storage.getContainer(req.params.id);
+      if (!container) {
+        return res.status(404).json({ message: "Container not found" });
+      }
+
+      // Resume container in Kubernetes
+      const { resumeContainer } = await import('./k8s-client');
+      
+      try {
+        await resumeContainer(req.params.id);
+        await storage.updateContainer(req.params.id, { status: 'running' });
+        res.json({ success: true, message: "Container resumed" });
+      } catch (k8sError) {
+        console.error('Failed to resume container:', k8sError);
+        res.status(500).json({ message: "Failed to resume container" });
+      }
+    } catch (error) {
+      res.status(500).json({ message: "Failed to resume container" });
     }
   });
 
