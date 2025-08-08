@@ -256,13 +256,13 @@ export async function getAgentLogs(containerId: string): Promise<string> {
   
   try {
     // First, find the pod created by this job
-    // listNamespacedPod parameters: namespace, pretty, _continue, fieldSelector, labelSelector
     const podsResponse = await api.listNamespacedPod(
       namespace,
-      undefined, // pretty
-      undefined, // _continue
-      undefined, // fieldSelector
-      labelSelector // labelSelector
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      labelSelector
     );
     
     if (podsResponse.body.items.length === 0) {
