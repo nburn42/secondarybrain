@@ -41,6 +41,41 @@ npm run build
 ./scripts/build-agent.sh && ./scripts/deploy-container.sh
 ```
 
+### Deployment Scripts
+The project includes several deployment and utility scripts in the `/scripts/` directory:
+
+#### Main Deployment Scripts
+- **`deploy.sh`** - Complete deployment script for GKE. Builds image, creates secrets, applies K8s manifests, and waits for rollout
+- **`build-app.sh`** - Builds and pushes main application Docker image to Artifact Registry
+- **`build-agent.sh`** - Builds and pushes agent container image to Artifact Registry
+
+#### Database Scripts
+- **`db-migrate.sh`** - Runs database migrations
+- **`setup-database.sh`** - Initial database setup via Cloud SQL proxy
+- **`setup-database-direct.sh`** - Direct database setup without proxy
+
+#### Secret Management
+- **`update-secrets.sh`** - Updates secrets in Google Secret Manager from .env file
+- **`fetch-secrets.sh`** - Retrieves secrets from Google Secret Manager to create .env file
+
+#### Container Deployment
+- **`deploy-container.sh`** - Deploys agent containers to GKE (used by the application)
+
+### Quick Deployment
+```bash
+# Full deployment to GKE (builds, pushes, deploys)
+./scripts/deploy.sh
+
+# Just build and push the application image
+./scripts/build-app.sh
+
+# Update secrets in Google Secret Manager
+./scripts/update-secrets.sh
+
+# Run database migrations
+./scripts/db-migrate.sh
+```
+
 ### Linting and Type Checking
 Always run these commands before committing:
 ```bash
@@ -69,9 +104,10 @@ cd server && npm run lint && npm run typecheck
 
 ### Current Deployment Status
 - ✅ Agent containers deployable to GKE
-- ❌ Main application needs containerization
+- ✅ Main application containerized and deployed to GKE
+- ✅ Auto-create containers feature implemented
 - ❌ No CI/CD pipeline yet
-- ❌ Missing production environment configuration
+- ✅ Production environment configured with K8s manifests
 
 ## Important Files
 - `TODO-DEPLOYMENT.md` - Complete deployment checklist

@@ -248,7 +248,7 @@ export async function deleteAgentJob(containerId: string) {
 }
 
 export async function getContainerLiveStatus(containerId: string): Promise<{
-  status: 'running' | 'completed' | 'failed' | 'pending' | 'paused' | 'not_found' | 'deleting';
+  status: 'running' | 'pending' | 'paused' | 'deleting' | 'deleted' | 'not_found';
   podPhase?: string;
   exitCode?: number;
   reason?: string;
@@ -277,16 +277,7 @@ export async function getContainerLiveStatus(containerId: string): Promise<{
       return { status: 'paused' };
     }
     
-    // Check job status
-    if (job.status?.succeeded > 0) {
-      return { status: 'completed', exitCode: 0 };
-    }
-    
-    if (job.status?.failed > 0) {
-      return { status: 'failed', exitCode: 1 };
-    }
-    
-    // Check pod status for more details
+    // Check pod status - this is what matters for container status
     const podsResponse: any = await api.listNamespacedPod({
       namespace: 'tandembrain',
       labelSelector: `job-name=${jobName}`
@@ -295,25 +286,30 @@ export async function getContainerLiveStatus(containerId: string): Promise<{
     const pods = podsResponse.body?.items || podsResponse.items || [];
     
     if (pods.length === 0) {
-      return { status: 'pending', reason: 'No pods created yet' };
+      // No pod exists yet
+      return { status: 'pending', reason: 'Pod is being created' };
     }
     
     const pod = pods[0];
     const podPhase = pod.status?.phase;
     
+    // Check if pod is terminating
+    if (pod.metadata?.deletionTimestamp) {
+      return { status: 'deleting' };
+    }
+    
     if (podPhase === 'Running') {
+      // Container is actively running
       return { status: 'running', podPhase };
-    } else if (podPhase === 'Succeeded') {
-      const containerStatus = pod.status?.containerStatuses?.[0];
-      const exitCode = containerStatus?.state?.terminated?.exitCode || 0;
-      return { status: 'completed', podPhase, exitCode };
-    } else if (podPhase === 'Failed') {
-      const containerStatus = pod.status?.containerStatuses?.[0];
-      const exitCode = containerStatus?.state?.terminated?.exitCode || 1;
-      const reason = containerStatus?.state?.terminated?.reason || 'Unknown error';
-      return { status: 'failed', podPhase, exitCode, reason };
     } else if (podPhase === 'Pending') {
+      // Pod is starting up
       return { status: 'pending', podPhase };
+    } else if (podPhase === 'Succeeded' || podPhase === 'Failed') {
+      // Pod has terminated - container no longer exists in cluster
+      // This means the container has been deleted (pods don't stick around after job completion)
+      const containerStatus = pod.status?.containerStatuses?.[0];
+      const exitCode = containerStatus?.state?.terminated?.exitCode;
+      return { status: 'deleted', podPhase, exitCode };
     }
     
     return { status: 'pending', podPhase };

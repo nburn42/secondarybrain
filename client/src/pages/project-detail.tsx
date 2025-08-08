@@ -27,8 +27,11 @@ import {
   Trash2,
   Container,
   Play,
-  StopCircle
+  StopCircle,
+  Zap
 } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import { Link } from "wouter";
 import ContainerCard from "@/components/container-card";
 
@@ -38,6 +41,7 @@ export default function ProjectDetail() {
   const [isTaskDialogOpen, setIsTaskDialogOpen] = useState(false);
   const [isRepoDialogOpen, setIsRepoDialogOpen] = useState(false);
   const [isContainerDialogOpen, setIsContainerDialogOpen] = useState(false);
+  const [isSettingsDialogOpen, setIsSettingsDialogOpen] = useState(false);
 
   const { toast } = useToast();
 
@@ -198,6 +202,26 @@ export default function ProjectDetail() {
     },
   });
 
+  const updateProjectMutation = useMutation({
+    mutationFn: async (data: any) => {
+      return await apiRequest("PATCH", `/api/projects/${projectId}`, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/projects", projectId] });
+      toast({
+        title: "Success",
+        description: "Project settings updated",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to update project settings",
+        variant: "destructive",
+      });
+    },
+  });
+
   const onTaskSubmit = (data: any) => {
     createTaskMutation.mutate(data);
   };
@@ -279,7 +303,11 @@ export default function ProjectDetail() {
               </div>
             </div>
             <div className="flex items-center space-x-3">
-              <Button variant="outline" size="sm">
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => setIsSettingsDialogOpen(true)}
+              >
                 <Settings className="w-4 h-4 mr-2" />
                 Settings
               </Button>
@@ -649,13 +677,62 @@ export default function ProjectDetail() {
               <Button 
                 onClick={() => {
                   createContainerMutation.mutate({
-                    projectId: projectId || "",
-                    status: "pending"
+                    projectId: projectId || ""
                   });
                 }}
                 disabled={createContainerMutation.isPending}
               >
                 {createContainerMutation.isPending ? "Creating..." : "Create Container"}
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Project Settings Dialog */}
+        <Dialog open={isSettingsDialogOpen} onOpenChange={setIsSettingsDialogOpen}>
+          <DialogContent className="sm:max-w-[525px]">
+            <DialogHeader>
+              <DialogTitle>Project Settings</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-6 py-4">
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label htmlFor="auto-create">
+                    <div className="flex items-center gap-2">
+                      <Zap className="h-4 w-4" />
+                      Auto-create Containers
+                    </div>
+                  </Label>
+                  <div className="text-sm text-muted-foreground">
+                    Automatically create containers when tasks are available
+                  </div>
+                </div>
+                <Switch
+                  id="auto-create"
+                  checked={project?.autoCreateContainers || false}
+                  onCheckedChange={(checked) => {
+                    updateProjectMutation.mutate({
+                      autoCreateContainers: checked
+                    });
+                  }}
+                />
+              </div>
+              
+              {project?.autoCreateContainers && (
+                <div className="rounded-lg bg-blue-50 p-4">
+                  <p className="text-sm text-blue-800">
+                    <strong>Auto-scaling enabled:</strong> New containers will automatically be created when tasks are waiting to be processed.
+                  </p>
+                </div>
+              )}
+            </div>
+            <div className="flex justify-end space-x-2 pt-4">
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={() => setIsSettingsDialogOpen(false)}
+              >
+                Close
               </Button>
             </div>
           </DialogContent>

@@ -20,6 +20,18 @@ spec:
     spec:
       serviceAccountName: tandembrain-app
       containers:
+      - name: cloud-sql-proxy
+        image: gcr.io/cloud-sql-connectors/cloud-sql-proxy:2.11.4
+        args:
+          - "--port=5432"
+          - "--structured-logs"
+          - "neuronotify:us-west2:tandembrain-db"
+        securityContext:
+          runAsNonRoot: true
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "10m"
       - name: tandembrain-app
         image: us-west2-docker.pkg.dev/neuronotify/tandembrain/tandembrain-app:latest
         imagePullPolicy: Always

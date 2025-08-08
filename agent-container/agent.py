@@ -85,7 +85,8 @@ class TaskAgent:
         """Fetch repositories for the current project"""
         print(f"Fetching repositories for project {self.project_id}...")
         
-        repos = self.make_api_request(f'/api/projects/{self.project_id}/repositories')
+        # Use the agent-specific endpoint that provides decrypted tokens
+        repos = self.make_api_request('/api/agent/repositories')
         if repos is None:
             print("Failed to fetch repositories")
             return []

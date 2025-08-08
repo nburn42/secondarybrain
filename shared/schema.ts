@@ -38,6 +38,7 @@ export const projects = pgTable("projects", {
   name: text("name").notNull(),
   description: text("description"),
   status: text("status").notNull().default("active"),
+  autoCreateContainers: boolean("auto_create_containers").default(false),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -148,6 +149,9 @@ export const insertProjectSchema = createInsertSchema(projects).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
+})
+.extend({
+  autoCreateContainers: z.boolean().optional().default(false),
 });
 
 export const insertGithubRepositorySchema = createInsertSchema(githubRepositories).omit({

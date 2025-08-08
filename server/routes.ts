@@ -23,6 +23,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const projects = await storage.getProjects(req.userId!);
       res.json(projects);
     } catch (error) {
+      console.error("Error fetching projects:", error);
       res.status(500).json({ message: "Failed to fetch projects" });
     }
   });
@@ -35,6 +36,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       res.json(project);
     } catch (error) {
+      console.error("Error fetching project:", error);
       res.status(500).json({ message: "Failed to fetch project" });
     }
   });
@@ -328,8 +330,65 @@ export async function registerRoutes(app: Express): Promise<Server> {
         projectId: req.params.projectId,
       });
       const task = await storage.createTask(taskData);
+      
+      // Check if we should auto-create a container
+      const project = await storage.getProjectById(req.params.projectId);
+      if (project?.autoCreateContainers) {
+        // Check if there are any active containers for this project
+        const containers = await storage.getContainersByProject(req.params.projectId);
+        
+        // Get live status for all containers to check if any are active
+        const { getContainerLiveStatus } = await import('./k8s-client');
+        let hasActiveContainers = false;
+        
+        for (const container of containers) {
+          try {
+            const liveStatus = await getContainerLiveStatus(container.id);
+            // Container is active if it's pending, running, or paused (not deleted/deleting/not_found)
+            if (['pending', 'running', 'paused'].includes(liveStatus.status)) {
+              hasActiveContainers = true;
+              break;
+            }
+          } catch (err) {
+            // If we can't get status, assume container might be active
+            console.error(`Failed to get status for container ${container.id}:`, err);
+          }
+        }
+        
+        // Only create a new container if there are no active containers
+        if (!hasActiveContainers) {
+          console.log(`Auto-creating container for project ${req.params.projectId} - no active containers found`);
+          
+          // Generate JWT token for the container
+          const jwtToken = generateAgentToken(req.params.projectId);
+          
+          // Create container in database
+          const newContainer = await storage.createContainer({
+            projectId: req.params.projectId,
+            name: `auto-${task.title.toLowerCase().replace(/\s+/g, '-').slice(0, 20)}`,
+            imageTag: 'latest',
+            jwtToken,
+          });
+          
+          // Create the actual container in GKE
+          const { createAgentJob } = await import('./k8s-client');
+          try {
+            await createAgentJob(newContainer.id, req.params.projectId, jwtToken);
+            await storage.updateContainer(newContainer.id, { startedAt: new Date() });
+            console.log(`Auto-created container ${newContainer.id} for project ${req.params.projectId}`);
+          } catch (k8sError) {
+            console.error('Failed to auto-create Kubernetes job:', k8sError);
+            // Delete the container record if k8s creation failed
+            await storage.deleteContainer(newContainer.id);
+          }
+        } else {
+          console.log(`Not auto-creating container for project ${req.params.projectId} - active containers exist`);
+        }
+      }
+      
       res.status(201).json(task);
     } catch (error) {
+      console.error("Error creating task:", error);
       if (error instanceof z.ZodError) {
         return res.status(400).json({ message: "Invalid task data", errors: error.errors });
       }

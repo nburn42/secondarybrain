@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import Header from "@/components/layout/header";
+import { PageLayout, PageContent } from "@/components/layout/page-layout";
 import StatsCard from "@/components/stats-card";
 import ProjectCard from "@/components/project-card";
 import { ProjectWithRelations } from "@shared/schema";
@@ -33,14 +34,14 @@ export default function Dashboard() {
 
   if (statsLoading || projectsLoading) {
     return (
-      <div className="flex-1">
+      <PageLayout>
         <Header 
           title="Dashboard" 
           subtitle="Overview of your projects and tasks"
           showNewButton
           onNewClick={() => setLocation("/projects")}
         />
-        <main className="flex-1 px-4 lg:px-6 py-6">
+        <PageContent>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6 mb-8">
             {[...Array(4)].map((_, i) => (
               <div key={i} className="bg-white rounded-xl shadow-sm p-6 border border-gray-100 animate-pulse">
@@ -60,7 +61,7 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="flex-1">
+    <PageLayout>
       <Header 
         title="Dashboard" 
         subtitle="Overview of your projects and tasks"
@@ -68,7 +69,7 @@ export default function Dashboard() {
         onNewClick={() => setLocation("/projects")}
       />
       
-      <main className="flex-1 px-4 lg:px-6 py-6">
+      <PageContent>
         {/* Stats Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
           <StatsCard

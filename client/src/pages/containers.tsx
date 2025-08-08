@@ -15,7 +15,8 @@ import {
   Trash2,
   Eye,
   AlertTriangle,
-  Package
+  Package,
+  Pause
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -32,14 +33,46 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { useEffect, useState } from "react";
 
 export default function ContainersPage() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const [liveStatuses, setLiveStatuses] = useState<Record<string, any>>({});
 
   const { data: containers, isLoading, error } = useQuery({
     queryKey: ["/api/containers"],
   });
+
+  // Fetch live status for all containers
+  useEffect(() => {
+    if (!containers || containers.length === 0) return;
+
+    const fetchStatuses = async () => {
+      const statuses: Record<string, any> = {};
+      
+      await Promise.all(
+        containers.map(async (container: Container) => {
+          try {
+            const response = await apiRequest("GET", `/api/containers/${container.id}/live-status`);
+            const status = await response.json();
+            statuses[container.id] = status;
+          } catch (err) {
+            console.error(`Failed to fetch status for container ${container.id}:`, err);
+            statuses[container.id] = { status: 'unknown' };
+          }
+        })
+      );
+      
+      setLiveStatuses(statuses);
+    };
+
+    fetchStatuses();
+    
+    // Refresh every 5 seconds
+    const interval = setInterval(fetchStatuses, 5000);
+    return () => clearInterval(interval);
+  }, [containers]);
 
   const deleteContainerMutation = useMutation({
     mutationFn: async (id: string) => {
@@ -63,31 +96,39 @@ export default function ContainersPage() {
     },
   });
 
-  const getStatusIcon = (status: Container["status"]) => {
+  const getStatusIcon = (status: string) => {
     switch (status) {
       case "pending":
         return <Clock className="h-4 w-4" />;
       case "running":
         return <Play className="h-4 w-4" />;
-      case "completed":
-        return <CheckCircle className="h-4 w-4" />;
-      case "failed":
+      case "paused":
+        return <Pause className="h-4 w-4" />;
+      case "deleting":
+        return <Trash2 className="h-4 w-4" />;
+      case "deleted":
         return <XCircle className="h-4 w-4" />;
+      case "not_found":
+        return <AlertTriangle className="h-4 w-4" />;
       default:
         return <Clock className="h-4 w-4" />;
     }
   };
 
-  const getStatusColor = (status: Container["status"]) => {
+  const getStatusColor = (status: string) => {
     switch (status) {
       case "pending":
         return "bg-yellow-100 text-yellow-800 border-yellow-200";
       case "running":
         return "bg-blue-100 text-blue-800 border-blue-200";
-      case "completed":
-        return "bg-green-100 text-green-800 border-green-200";
-      case "failed":
-        return "bg-red-100 text-red-800 border-red-200";
+      case "paused":
+        return "bg-orange-100 text-orange-800 border-orange-200";
+      case "deleting":
+        return "bg-gray-100 text-gray-800 border-gray-200";
+      case "deleted":
+        return "bg-gray-100 text-gray-600 border-gray-200";
+      case "not_found":
+        return "bg-gray-100 text-gray-800 border-gray-200";
       default:
         return "bg-gray-100 text-gray-800 border-gray-200";
     }
@@ -97,9 +138,11 @@ export default function ContainersPage() {
     return (
       <PageLayout>
         <Header title="Containers" />
+        <PageContent>
           <div className="flex items-center justify-center h-64">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
           </div>
+        </PageContent>
       </PageLayout>
     );
   }
@@ -108,14 +151,15 @@ export default function ContainersPage() {
     return (
       <PageLayout>
         <Header title="Containers" />
+        <PageContent>
           <Alert variant="destructive">
             <AlertTriangle className="h-4 w-4" />
             <AlertDescription>
               Failed to load containers. Please try refreshing the page.
             </AlertDescription>
           </Alert>
-        </div>
-      </div>
+        </PageContent>
+      </PageLayout>
     );
   }
 
@@ -123,10 +167,15 @@ export default function ContainersPage() {
     new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
   ) : [];
 
-  const runningContainers = sortedContainers.filter(c => c.status === "running");
-  const pendingContainers = sortedContainers.filter(c => c.status === "pending");
-  const completedContainers = sortedContainers.filter(c => c.status === "completed");
-  const failedContainers = sortedContainers.filter(c => c.status === "failed");
+  // Group containers by their live status
+  const runningContainers = sortedContainers.filter(c => liveStatuses[c.id]?.status === "running");
+  const pausedContainers = sortedContainers.filter(c => liveStatuses[c.id]?.status === "paused");
+  const pendingContainers = sortedContainers.filter(c => liveStatuses[c.id]?.status === "pending");
+  const deletedContainers = sortedContainers.filter(c => liveStatuses[c.id]?.status === "deleted");
+  const otherContainers = sortedContainers.filter(c => {
+    const status = liveStatuses[c.id]?.status;
+    return !status || !["running", "paused", "pending", "deleted"].includes(status);
+  });
 
   return (
     <PageLayout>
@@ -161,26 +210,26 @@ export default function ContainersPage() {
 
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-green-600">
-                Completed
+              <CardTitle className="text-sm font-medium text-orange-600">
+                Paused
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-green-600">
-                {completedContainers.length}
+              <div className="text-2xl font-bold text-orange-600">
+                {pausedContainers.length}
               </div>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-red-600">
-                Failed
+              <CardTitle className="text-sm font-medium text-gray-600">
+                Deleted
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-red-600">
-                {failedContainers.length}
+              <div className="text-2xl font-bold text-gray-600">
+                {deletedContainers.length}
               </div>
             </CardContent>
           </Card>
@@ -209,8 +258,29 @@ export default function ContainersPage() {
                   <ContainerCard
                     key={container.id}
                     container={container}
+                    liveStatus={liveStatuses[container.id]}
                     onView={() => setLocation(`/containers/${container.id}`)}
                     onDelete={() => deleteContainerMutation.mutate(container.id)}
+                    getStatusIcon={getStatusIcon}
+                    getStatusColor={getStatusColor}
+                  />
+                ))}
+              </div>
+            )}
+
+            {/* Paused Containers */}
+            {pausedContainers.length > 0 && (
+              <div className="space-y-2">
+                <h2 className="text-lg font-semibold text-gray-900">Paused</h2>
+                {pausedContainers.map((container) => (
+                  <ContainerCard
+                    key={container.id}
+                    container={container}
+                    liveStatus={liveStatuses[container.id]}
+                    onView={() => setLocation(`/containers/${container.id}`)}
+                    onDelete={() => deleteContainerMutation.mutate(container.id)}
+                    getStatusIcon={getStatusIcon}
+                    getStatusColor={getStatusColor}
                   />
                 ))}
               </div>
@@ -224,38 +294,47 @@ export default function ContainersPage() {
                   <ContainerCard
                     key={container.id}
                     container={container}
+                    liveStatus={liveStatuses[container.id]}
                     onView={() => setLocation(`/containers/${container.id}`)}
                     onDelete={() => deleteContainerMutation.mutate(container.id)}
+                    getStatusIcon={getStatusIcon}
+                    getStatusColor={getStatusColor}
                   />
                 ))}
               </div>
             )}
 
-            {/* Completed Containers */}
-            {completedContainers.length > 0 && (
+            {/* Deleted Containers */}
+            {deletedContainers.length > 0 && (
               <div className="space-y-2">
-                <h2 className="text-lg font-semibold text-gray-900">Completed</h2>
-                {completedContainers.map((container) => (
+                <h2 className="text-lg font-semibold text-gray-900">Deleted</h2>
+                {deletedContainers.map((container) => (
                   <ContainerCard
                     key={container.id}
                     container={container}
+                    liveStatus={liveStatuses[container.id]}
                     onView={() => setLocation(`/containers/${container.id}`)}
                     onDelete={() => deleteContainerMutation.mutate(container.id)}
+                    getStatusIcon={getStatusIcon}
+                    getStatusColor={getStatusColor}
                   />
                 ))}
               </div>
             )}
 
-            {/* Failed Containers */}
-            {failedContainers.length > 0 && (
+            {/* Other/Unknown Status Containers */}
+            {otherContainers.length > 0 && (
               <div className="space-y-2">
-                <h2 className="text-lg font-semibold text-gray-900">Failed</h2>
-                {failedContainers.map((container) => (
+                <h2 className="text-lg font-semibold text-gray-900">Other</h2>
+                {otherContainers.map((container) => (
                   <ContainerCard
                     key={container.id}
                     container={container}
+                    liveStatus={liveStatuses[container.id]}
                     onView={() => setLocation(`/containers/${container.id}`)}
                     onDelete={() => deleteContainerMutation.mutate(container.id)}
+                    getStatusIcon={getStatusIcon}
+                    getStatusColor={getStatusColor}
                   />
                 ))}
               </div>
@@ -269,42 +348,21 @@ export default function ContainersPage() {
 
 function ContainerCard({ 
   container, 
+  liveStatus,
   onView, 
-  onDelete 
+  onDelete,
+  getStatusIcon,
+  getStatusColor
 }: { 
   container: Container; 
+  liveStatus: any;
   onView: () => void;
   onDelete: () => void;
+  getStatusIcon: (status: string) => JSX.Element;
+  getStatusColor: (status: string) => string;
 }) {
-  const getStatusIcon = (status: Container["status"]) => {
-    switch (status) {
-      case "pending":
-        return <Clock className="h-4 w-4" />;
-      case "running":
-        return <Play className="h-4 w-4" />;
-      case "completed":
-        return <CheckCircle className="h-4 w-4" />;
-      case "failed":
-        return <XCircle className="h-4 w-4" />;
-      default:
-        return <Clock className="h-4 w-4" />;
-    }
-  };
-
-  const getStatusColor = (status: Container["status"]) => {
-    switch (status) {
-      case "pending":
-        return "bg-yellow-100 text-yellow-800 border-yellow-200";
-      case "running":
-        return "bg-blue-100 text-blue-800 border-blue-200";
-      case "completed":
-        return "bg-green-100 text-green-800 border-green-200";
-      case "failed":
-        return "bg-red-100 text-red-800 border-red-200";
-      default:
-        return "bg-gray-100 text-gray-800 border-gray-200";
-    }
-  };
+  const status = liveStatus?.status || 'unknown';
+  const displayStatus = status === 'not_found' ? 'Not Found' : status;
 
   return (
     <Card className="hover:shadow-md transition-shadow">
@@ -322,10 +380,10 @@ function ContainerCard({
                 </h3>
                 <Badge 
                   variant="outline" 
-                  className={`${getStatusColor(container.status)} flex items-center gap-1`}
+                  className={`${getStatusColor(status)} flex items-center gap-1`}
                 >
-                  {getStatusIcon(container.status)}
-                  {container.status}
+                  {getStatusIcon(status)}
+                  <span className="capitalize">{displayStatus}</span>
                 </Badge>
                 <span className="text-xs text-gray-500">
                   v{container.imageTag || "latest"}

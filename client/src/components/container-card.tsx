@@ -2,9 +2,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Container } from "@shared/schema";
-import { Clock, Play, CheckCircle, XCircle, Trash2, Eye } from "lucide-react";
+import { Clock, Play, CheckCircle, XCircle, Trash2, Eye, Pause, AlertTriangle } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { Link } from "wouter";
+import { useQuery } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
 
 interface ContainerCardProps {
   container: Container;
@@ -13,31 +15,49 @@ interface ContainerCardProps {
 }
 
 export default function ContainerCard({ container, onDelete, onViewLogs }: ContainerCardProps) {
-  const getStatusIcon = () => {
-    switch (container.status) {
+  // Fetch live status from cluster
+  const { data: liveStatus } = useQuery({
+    queryKey: ["/api/containers", container.id, "live-status"],
+    queryFn: async () => {
+      const response = await apiRequest("GET", `/api/containers/${container.id}/live-status`);
+      return await response.json();
+    },
+    refetchInterval: 5000, // Check status every 5 seconds
+  });
+
+  const getStatusIcon = (status: string) => {
+    switch (status) {
       case "pending":
         return <Clock className="h-4 w-4" />;
       case "running":
         return <Play className="h-4 w-4" />;
-      case "completed":
-        return <CheckCircle className="h-4 w-4" />;
-      case "failed":
+      case "paused":
+        return <Pause className="h-4 w-4" />;
+      case "deleting":
+        return <Trash2 className="h-4 w-4" />;
+      case "deleted":
         return <XCircle className="h-4 w-4" />;
+      case "not_found":
+        return <AlertTriangle className="h-4 w-4" />;
       default:
         return <Clock className="h-4 w-4" />;
     }
   };
 
-  const getStatusColor = () => {
-    switch (container.status) {
+  const getStatusColor = (status: string) => {
+    switch (status) {
       case "pending":
         return "bg-yellow-100 text-yellow-800 border-yellow-200";
       case "running":
         return "bg-blue-100 text-blue-800 border-blue-200";
-      case "completed":
-        return "bg-green-100 text-green-800 border-green-200";
-      case "failed":
-        return "bg-red-100 text-red-800 border-red-200";
+      case "paused":
+        return "bg-orange-100 text-orange-800 border-orange-200";
+      case "deleting":
+        return "bg-gray-100 text-gray-800 border-gray-200";
+      case "deleted":
+        return "bg-gray-100 text-gray-600 border-gray-200";
+      case "not_found":
+        return "bg-gray-100 text-gray-800 border-gray-200";
       default:
         return "bg-gray-100 text-gray-800 border-gray-200";
     }
@@ -71,10 +91,19 @@ export default function ContainerCard({ container, onDelete, onViewLogs }: Conta
                 {container.name || `Container ${container.id.slice(0, 8)}`}
               </CardTitle>
               <div className="flex items-center space-x-2">
-                <Badge variant="outline" className={getStatusColor()}>
-                  {getStatusIcon()}
-                  <span className="ml-1 capitalize">{container.status}</span>
-                </Badge>
+                {liveStatus ? (
+                  <Badge variant="outline" className={getStatusColor(liveStatus.status)}>
+                    {getStatusIcon(liveStatus.status)}
+                    <span className="ml-1 capitalize">
+                      {liveStatus.status === 'not_found' ? 'Not Found' : liveStatus.status}
+                    </span>
+                  </Badge>
+                ) : (
+                  <Badge variant="outline" className="bg-gray-100 text-gray-800 border-gray-200">
+                    <Clock className="h-4 w-4" />
+                    <span className="ml-1">Loading...</span>
+                  </Badge>
+                )}
                 <span className="text-sm text-gray-500">
                   {container.imageTag}
                 </span>

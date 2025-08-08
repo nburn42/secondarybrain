@@ -156,12 +156,10 @@ export default function ContainerDetail() {
         return <Play className="h-5 w-5" />;
       case "paused":
         return <Pause className="h-5 w-5" />;
-      case "completed":
-        return <CheckCircle className="h-5 w-5" />;
-      case "failed":
-        return <XCircle className="h-5 w-5" />;
       case "deleting":
         return <Trash2 className="h-5 w-5" />;
+      case "deleted":
+        return <XCircle className="h-5 w-5" />;
       case "not_found":
         return <AlertTriangle className="h-5 w-5" />;
       default:
@@ -177,12 +175,10 @@ export default function ContainerDetail() {
         return "bg-blue-100 text-blue-800 border-blue-200";
       case "paused":
         return "bg-orange-100 text-orange-800 border-orange-200";
-      case "completed":
-        return "bg-green-100 text-green-800 border-green-200";
-      case "failed":
-        return "bg-red-100 text-red-800 border-red-200";
       case "deleting":
         return "bg-gray-100 text-gray-800 border-gray-200";
+      case "deleted":
+        return "bg-gray-100 text-gray-600 border-gray-200";
       case "not_found":
         return "bg-gray-100 text-gray-800 border-gray-200";
       default:
@@ -198,12 +194,10 @@ export default function ContainerDetail() {
         return "Container is active";
       case "paused":
         return "Container is suspended";
-      case "completed":
-        return "Container finished successfully";
-      case "failed":
-        return "Container exited with error";
       case "deleting":
         return "Container is shutting down";
+      case "deleted":
+        return "Container has been removed";
       case "not_found":
         return "Container not in cluster";
       default:

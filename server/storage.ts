@@ -38,6 +38,7 @@ export interface IStorage {
   // Projects
   getProjects(userId: string): Promise<ProjectWithRelations[]>;
   getProject(id: string, userId: string): Promise<ProjectWithRelations | undefined>;
+  getProjectById(id: string): Promise<Project | undefined>;
   createProject(project: InsertProject): Promise<Project>;
   updateProject(id: string, userId: string, project: Partial<InsertProject>): Promise<Project>;
   deleteProject(id: string, userId: string): Promise<void>;
@@ -129,6 +130,12 @@ export class DatabaseStorage implements IStorage {
         repositories: true,
         tasks: true,
       },
+    });
+  }
+
+  async getProjectById(id: string): Promise<Project | undefined> {
+    return await db.query.projects.findFirst({
+      where: eq(projects.id, id),
     });
   }
 
