@@ -492,14 +492,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       try {
         await createAgentJob(container.id, containerData.projectId, jwtToken);
         
-        // Update container status to running
-        await storage.updateContainer(container.id, { status: 'running', startedAt: new Date() });
+        // Update container startedAt timestamp
+        await storage.updateContainer(container.id, { startedAt: new Date() });
         
-        res.status(201).json({ ...container, status: 'running' });
+        res.status(201).json(container);
       } catch (k8sError) {
         console.error('Failed to create Kubernetes job:', k8sError);
-        // Update container status to failed
-        await storage.updateContainer(container.id, { status: 'failed' });
+        // Delete the container record if k8s creation failed
+        await storage.deleteContainer(container.id);
         throw new Error('Failed to create container in cluster');
       }
     } catch (error) {
@@ -580,26 +580,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Container not found" });
       }
 
-      // Get live status from Kubernetes
+      // Get live status from Kubernetes - this is purely the cluster state
       const { getContainerLiveStatus } = await import('./k8s-client');
       
       try {
         const liveStatus = await getContainerLiveStatus(req.params.id);
         
-        // Update database if status changed
-        if (liveStatus.status !== container.status && liveStatus.status !== 'not_found') {
-          const updateData: any = { status: liveStatus.status };
-          
-          if (liveStatus.status === 'running' && !container.startedAt) {
-            updateData.startedAt = new Date();
-          } else if ((liveStatus.status === 'completed' || liveStatus.status === 'failed') && !container.completedAt) {
-            updateData.completedAt = new Date();
-            if (liveStatus.exitCode !== undefined) {
-              updateData.exitCode = liveStatus.exitCode;
-            }
+        // Only update timestamps in database, not status
+        if ((liveStatus.status === 'completed' || liveStatus.status === 'failed') && !container.completedAt) {
+          const updateData: any = {
+            completedAt: new Date()
+          };
+          if (liveStatus.exitCode !== undefined) {
+            updateData.exitCode = liveStatus.exitCode;
           }
-          
           await storage.updateContainer(req.params.id, updateData);
+        } else if (liveStatus.status === 'running' && !container.startedAt) {
+          // Update startedAt timestamp when container starts running
+          await storage.updateContainer(req.params.id, { 
+            startedAt: new Date()
+          });
         }
         
         res.json(liveStatus);
@@ -624,7 +624,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       try {
         await pauseContainer(req.params.id);
-        await storage.updateContainer(req.params.id, { status: 'paused' as any });
         res.json({ success: true, message: "Container paused" });
       } catch (k8sError) {
         console.error('Failed to pause container:', k8sError);
@@ -647,7 +646,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       try {
         await resumeContainer(req.params.id);
-        await storage.updateContainer(req.params.id, { status: 'running' });
         res.json({ success: true, message: "Container resumed" });
       } catch (k8sError) {
         console.error('Failed to resume container:', k8sError);

@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import Header from "@/components/layout/header";
+import { PageLayout, PageContent } from "@/components/layout/page-layout";
 import ProjectCard from "@/components/project-card";
 import { ProjectWithRelations, insertProjectSchema } from "@shared/schema";
 import { Button } from "@/components/ui/button";
@@ -70,14 +71,14 @@ export default function Projects() {
 
   if (isLoading) {
     return (
-      <div className="flex-1">
+      <PageLayout>
         <Header 
           title="Projects" 
           subtitle="Manage your development projects"
           showNewButton
           onNewClick={() => setIsDialogOpen(true)}
         />
-        <main className="flex-1 px-6 py-6">
+        <PageContent>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {[...Array(6)].map((_, i) => (
               <div key={i} className="bg-white rounded-xl shadow-sm p-6 border border-gray-100 animate-pulse">
@@ -92,8 +93,8 @@ export default function Projects() {
               </div>
             ))}
           </div>
-        </main>
-      </div>
+        </PageContent>
+      </PageLayout>
     );
   }
 
@@ -106,7 +107,7 @@ export default function Projects() {
         onNewClick={() => setIsDialogOpen(true)}
       />
       
-      <main className="flex-1 px-4 lg:px-6 py-6">
+      <PageContent>
         {/* Search Bar */}
         <div className="mb-6">
           <div className="relative max-w-md">
@@ -243,7 +244,7 @@ export default function Projects() {
             </Form>
           </DialogContent>
         </Dialog>
-      </main>
-    </div>
+      </PageContent>
+    </PageLayout>
   );
 }

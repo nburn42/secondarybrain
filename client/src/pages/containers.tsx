@@ -1,6 +1,7 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import Header from "@/components/layout/header";
+import { PageLayout, PageContent } from "@/components/layout/page-layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -94,22 +95,19 @@ export default function ContainersPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-50">
+      <PageLayout>
         <Header title="Containers" />
-        <div className="px-4 md:px-6 lg:px-8 py-6 max-w-7xl mx-auto">
           <div className="flex items-center justify-center h-64">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
           </div>
-        </div>
-      </div>
+      </PageLayout>
     );
   }
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gray-50">
+      <PageLayout>
         <Header title="Containers" />
-        <div className="px-4 md:px-6 lg:px-8 py-6 max-w-7xl mx-auto">
           <Alert variant="destructive">
             <AlertTriangle className="h-4 w-4" />
             <AlertDescription>
@@ -131,10 +129,10 @@ export default function ContainersPage() {
   const failedContainers = sortedContainers.filter(c => c.status === "failed");
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <PageLayout>
       <Header title="All Containers" />
       
-      <div className="px-4 md:px-6 lg:px-8 py-6 space-y-6 max-w-7xl mx-auto">
+      <PageContent>
         {/* Summary Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <Card>
@@ -264,8 +262,8 @@ export default function ContainersPage() {
             )}
           </div>
         )}
-      </div>
-    </div>
+      </PageContent>
+    </PageLayout>
   );
 }
 

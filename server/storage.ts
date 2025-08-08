@@ -493,7 +493,6 @@ export class DatabaseStorage implements IStorage {
         projectId: containers.projectId,
         name: containers.name,
         imageTag: containers.imageTag,
-        status: containers.status,
         jwtToken: containers.jwtToken,
         createdAt: containers.createdAt,
         startedAt: containers.startedAt,

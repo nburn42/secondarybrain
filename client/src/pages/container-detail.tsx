@@ -1,21 +1,23 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useRoute, useLocation } from "wouter";
 import Header from "@/components/layout/header";
+import { PageLayout, PageContent } from "@/components/layout/page-layout";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { 
   ArrowLeft, 
   Clock, 
   Play, 
+  Pause,
   CheckCircle, 
   XCircle, 
   Trash2,
   Container,
-  AlertTriangle
+  AlertTriangle,
+  RefreshCw
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -44,6 +46,16 @@ export default function ContainerDetail() {
     enabled: !!containerId,
   });
 
+  const { data: liveStatus } = useQuery({
+    queryKey: ["/api/containers", containerId, "live-status"],
+    queryFn: async () => {
+      const response = await apiRequest("GET", `/api/containers/${containerId}/live-status`);
+      return await response.json();
+    },
+    enabled: !!containerId,
+    refetchInterval: 5000, // Check live status every 5 seconds
+  });
+
   const { data: logsData, isLoading: logsLoading } = useQuery({
     queryKey: ["/api/containers", containerId, "logs"],
     queryFn: async () => {
@@ -51,7 +63,7 @@ export default function ContainerDetail() {
       return await response.json();
     },
     enabled: !!containerId,
-    refetchInterval: container?.status === "running" ? 5000 : false, // Auto-refresh logs for running containers
+    refetchInterval: liveStatus?.status === "running" ? 5000 : false, // Auto-refresh logs for running containers
   });
 
   const deleteContainerMutation = useMutation({
@@ -77,38 +89,125 @@ export default function ContainerDetail() {
     },
   });
 
+  const pauseContainerMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const response = await apiRequest("POST", `/api/containers/${id}/pause`);
+      return await response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Container paused",
+        description: "The container has been paused successfully.",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/containers", containerId] });
+      queryClient.invalidateQueries({ queryKey: ["/api/containers", containerId, "live-status"] });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to pause container.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const resumeContainerMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const response = await apiRequest("POST", `/api/containers/${id}/resume`);
+      return await response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Container resumed",
+        description: "The container has been resumed successfully.",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/containers", containerId] });
+      queryClient.invalidateQueries({ queryKey: ["/api/containers", containerId, "live-status"] });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to resume container.",
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleDeleteContainer = async () => {
     if (!containerId) return;
     deleteContainerMutation.mutate(containerId);
   };
 
-  const getStatusIcon = (status: ContainerType["status"]) => {
+  const handlePauseContainer = async () => {
+    if (!containerId) return;
+    pauseContainerMutation.mutate(containerId);
+  };
+
+  const handleResumeContainer = async () => {
+    if (!containerId) return;
+    resumeContainerMutation.mutate(containerId);
+  };
+
+  const getStatusIcon = (status: ContainerType["status"] | string) => {
     switch (status) {
       case "pending":
         return <Clock className="h-5 w-5" />;
       case "running":
         return <Play className="h-5 w-5" />;
+      case "paused":
+        return <Pause className="h-5 w-5" />;
       case "completed":
         return <CheckCircle className="h-5 w-5" />;
       case "failed":
         return <XCircle className="h-5 w-5" />;
+      case "deleting":
+        return <Trash2 className="h-5 w-5" />;
+      case "not_found":
+        return <AlertTriangle className="h-5 w-5" />;
       default:
         return <Clock className="h-5 w-5" />;
     }
   };
 
-  const getStatusColor = (status: ContainerType["status"]) => {
+  const getStatusColor = (status: ContainerType["status"] | string) => {
     switch (status) {
       case "pending":
         return "bg-yellow-100 text-yellow-800 border-yellow-200";
       case "running":
         return "bg-blue-100 text-blue-800 border-blue-200";
+      case "paused":
+        return "bg-orange-100 text-orange-800 border-orange-200";
       case "completed":
         return "bg-green-100 text-green-800 border-green-200";
       case "failed":
         return "bg-red-100 text-red-800 border-red-200";
+      case "deleting":
+        return "bg-gray-100 text-gray-800 border-gray-200";
+      case "not_found":
+        return "bg-gray-100 text-gray-800 border-gray-200";
       default:
         return "bg-gray-100 text-gray-800 border-gray-200";
+    }
+  };
+
+  const getStatusDescription = (status: string) => {
+    switch (status) {
+      case "pending":
+        return "Pod is spinning up";
+      case "running":
+        return "Container is active";
+      case "paused":
+        return "Container is suspended";
+      case "completed":
+        return "Container finished successfully";
+      case "failed":
+        return "Container exited with error";
+      case "deleting":
+        return "Container is shutting down";
+      case "not_found":
+        return "Container not in cluster";
+      default:
+        return status;
     }
   };
 
@@ -132,48 +231,44 @@ export default function ContainerDetail() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-50">
+      <PageLayout>
         <Header title="Loading Container..." />
-        <div className="px-4 md:px-6 lg:px-8 py-6 max-w-7xl mx-auto">
-          <div className="flex items-center justify-center h-64">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-          </div>
+        <div className="flex items-center justify-center h-64">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
         </div>
-      </div>
+      </PageLayout>
     );
   }
 
   if (error || !container) {
     return (
-      <div className="min-h-screen bg-gray-50">
+      <PageLayout>
         <Header title="Container Not Found" />
-        <div className="px-4 md:px-6 lg:px-8 py-6 max-w-7xl mx-auto">
-          <Alert variant="destructive">
-            <AlertTriangle className="h-4 w-4" />
-            <AlertDescription>
-              Container not found or you don't have permission to view it.
-            </AlertDescription>
-          </Alert>
-          <Button 
-            onClick={() => setLocation("/")} 
-            className="mt-4"
-            variant="outline"
-          >
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Go Back
-          </Button>
-        </div>
-      </div>
+        <Alert variant="destructive">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertDescription>
+            Container not found or you don't have permission to view it.
+          </AlertDescription>
+        </Alert>
+        <Button 
+          onClick={() => setLocation("/")} 
+          className="mt-4"
+          variant="outline"
+        >
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          Go Back
+        </Button>
+      </PageLayout>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <PageLayout>
       <Header 
         title={container.name || `Container ${container.id.slice(0, 8)}`}
       />
       
-      <div className="px-4 md:px-6 lg:px-8 py-6 space-y-6 max-w-7xl mx-auto">
+      <PageContent>
         <div className="flex items-center justify-between">
           <Button 
             onClick={() => setLocation("/")} 
@@ -184,16 +279,39 @@ export default function ContainerDetail() {
             Back to Dashboard
           </Button>
 
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
+          <div className="flex gap-2">
+            {/* Run/Pause Button */}
+            {liveStatus?.status === 'paused' ? (
               <Button 
-                variant="destructive"
-                disabled={deleteContainerMutation.isPending}
+                onClick={handleResumeContainer}
+                disabled={resumeContainerMutation.isPending}
+                variant="default"
               >
-                <Trash2 className="h-4 w-4 mr-2" />
-                {deleteContainerMutation.isPending ? "Shutting down..." : "Shut down"}
+                <Play className="h-4 w-4 mr-2" />
+                {resumeContainerMutation.isPending ? "Resuming..." : "Resume"}
               </Button>
-            </AlertDialogTrigger>
+            ) : liveStatus?.status === 'running' ? (
+              <Button 
+                onClick={handlePauseContainer}
+                disabled={pauseContainerMutation.isPending}
+                variant="secondary"
+              >
+                <Pause className="h-4 w-4 mr-2" />
+                {pauseContainerMutation.isPending ? "Pausing..." : "Pause"}
+              </Button>
+            ) : null}
+
+            {/* Delete Button */}
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button 
+                  variant="destructive"
+                  disabled={deleteContainerMutation.isPending}
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  {deleteContainerMutation.isPending ? "Deleting..." : "Delete"}
+                </Button>
+              </AlertDialogTrigger>
             <AlertDialogContent>
               <AlertDialogHeader>
                 <AlertDialogTitle>Shut down container?</AlertDialogTitle>
@@ -212,7 +330,8 @@ export default function ContainerDetail() {
                 </AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>
-          </AlertDialog>
+            </AlertDialog>
+          </div>
         </div>
 
         {/* Container Overview */}
@@ -230,10 +349,33 @@ export default function ContainerDetail() {
                   </p>
                 </div>
               </div>
-              <Badge variant="outline" className={getStatusColor(container.status)}>
-                {getStatusIcon(container.status)}
-                <span className="ml-2 capitalize">{container.status}</span>
-              </Badge>
+              <div className="flex flex-col items-end gap-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-gray-500">DB Status:</span>
+                  <Badge variant="outline" className={getStatusColor(container.status)} title="Status saved in database">
+                    {getStatusIcon(container.status)}
+                    <span className="ml-2 capitalize">{container.status}</span>
+                  </Badge>
+                </div>
+                {liveStatus && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-gray-500">Live Status:</span>
+                    <Badge 
+                      variant="outline" 
+                      className={getStatusColor(liveStatus.status)}
+                      title={getStatusDescription(liveStatus.status)}
+                    >
+                      {getStatusIcon(liveStatus.status)}
+                      <span className="ml-2 capitalize">
+                        {liveStatus.status === 'not_found' ? 'Not Found' : liveStatus.status}
+                      </span>
+                    </Badge>
+                    {liveStatus.status !== container.status && liveStatus.status !== 'not_found' && (
+                      <RefreshCw className="h-3 w-3 text-blue-500 animate-spin" title="Syncing with cluster" />
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
           </CardHeader>
           <CardContent>
@@ -317,7 +459,7 @@ export default function ContainerDetail() {
             )}
           </CardContent>
         </Card>
-      </div>
-    </div>
+      </PageContent>
+    </PageLayout>
   );
 }

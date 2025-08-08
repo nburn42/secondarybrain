@@ -233,7 +233,6 @@ export const containers = pgTable("containers", {
   projectId: text("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
   name: text("name"),
   imageTag: text("image_tag").default("latest"),
-  status: text("status", { enum: ["pending", "running", "completed", "failed", "paused"] }).notNull().default("pending"),
   jwtToken: text("jwt_token").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   startedAt: timestamp("started_at"),

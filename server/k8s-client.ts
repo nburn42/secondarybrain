@@ -248,7 +248,7 @@ export async function deleteAgentJob(containerId: string) {
 }
 
 export async function getContainerLiveStatus(containerId: string): Promise<{
-  status: 'running' | 'completed' | 'failed' | 'pending' | 'paused' | 'not_found';
+  status: 'running' | 'completed' | 'failed' | 'pending' | 'paused' | 'not_found' | 'deleting';
   podPhase?: string;
   exitCode?: number;
   reason?: string;
@@ -266,6 +266,11 @@ export async function getContainerLiveStatus(containerId: string): Promise<{
     } as any);
     
     const job = jobResponse.body || jobResponse;
+    
+    // Check if job is being deleted
+    if (job.metadata?.deletionTimestamp) {
+      return { status: 'deleting' };
+    }
     
     // Check if job is suspended (paused)
     if (job.spec?.suspend === true) {

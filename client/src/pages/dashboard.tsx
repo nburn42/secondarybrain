@@ -54,8 +54,8 @@ export default function Dashboard() {
               </div>
             ))}
           </div>
-        </main>
-      </div>
+        </PageContent>
+      </PageLayout>
     );
   }
 
@@ -70,7 +70,7 @@ export default function Dashboard() {
       
       <main className="flex-1 px-4 lg:px-6 py-6">
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
           <StatsCard
             title="Total Projects"
             value={stats?.totalProjects || 0}
@@ -98,7 +98,7 @@ export default function Dashboard() {
         </div>
 
         {/* Main Content Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6 mb-8">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
           {/* Recent Projects */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-100">
             <div className="p-6">
@@ -234,7 +234,7 @@ export default function Dashboard() {
             </Button>
           </div>
         </div>
-      </main>
-    </div>
+      </PageContent>
+    </PageLayout>
   );
 }

@@ -116,25 +116,37 @@ class TaskAgent:
             # Prepare clone URL with authentication if available
             clone_url = repo_url
             if github_token and is_private:
-                # Decrypt the token (assuming we add decryption capability)
-                decrypted_token = self._decrypt_github_token(github_token)
-                if decrypted_token:
-                    # Format: https://token@github.com/owner/repo.git
-                    if repo_url.startswith('https://github.com/'):
-                        clone_url = repo_url.replace('https://github.com/', f'https://{decrypted_token}@github.com/')
+                # Token is already decrypted by the server at /api/agent/repositories
+                # Format: https://token@github.com/owner/repo.git
+                if repo_url.startswith('https://github.com/'):
+                    clone_url = repo_url.replace('https://github.com/', f'https://{github_token}@github.com/')
                     print(f"Using authenticated clone URL")
-                else:
-                    print("Warning: Failed to decrypt GitHub token, using public clone")
+            elif is_private:
+                print("Warning: No GitHub token available for private repository")
             
             # Clone the repository
             git.Repo.clone_from(clone_url, clone_path)
-            print(f"Successfully cloned {repo_name}")
+            print(f"✅ Successfully cloned {repo_name}")
             return True
             
+        except git.exc.GitCommandError as e:
+            # Handle specific Git errors
+            error_str = str(e)
+            if "Authentication failed" in error_str or "Invalid username or token" in error_str:
+                print(f"❌ Authentication failed for {repo_name}")
+                if is_private:
+                    print(f"   The repository is private. Please ensure:")
+                    print(f"   1. A valid GitHub token is configured for this repository")
+                    print(f"   2. The token has 'repo' scope to access private repositories")
+            elif "Repository not found" in error_str or "repository not found" in error_str.lower():
+                print(f"❌ Repository not found: {repo_url}")
+                print(f"   Please check if the repository exists and is accessible")
+            else:
+                print(f"❌ Git error cloning {repo_name}: {e}")
+            return False
+            
         except Exception as e:
-            print(f"Failed to clone {repo_name}: {e}")
-            if is_private and not github_token:
-                print("Note: This appears to be a private repository. Authentication may be required.")
+            print(f"❌ Failed to clone {repo_name}: {e}")
             return False
 
     def _decrypt_github_token(self, encrypted_token: str) -> str:
@@ -329,6 +341,8 @@ class TaskAgent:
             
             # Mark container as completed successfully
             self.update_container_status('completed', exit_code=0)
+            print("Container execution completed successfully")
+            sys.exit(0)
             
         except Exception as e:
             print(f"Agent execution failed: {e}")
